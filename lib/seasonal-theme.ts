@@ -1,3 +1,5 @@
+import { withBasePath } from "./base-path"
+
 export type SeasonalThemeId =
   | "new-year"
   | "defender-day"
@@ -43,6 +45,8 @@ type CalendarDate = {
   day: number
 }
 
+const WINTER_BACKGROUND_IMAGE = withBasePath("/dark-winter-forest-snow-christmas-night-stars.jpg")
+
 function getMoscowCalendarDate(now: Date): CalendarDate {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Europe/Moscow",
@@ -67,7 +71,7 @@ const THEMES: Record<SeasonalThemeId, SeasonalTheme> = {
     summaryLabel: "MDC CLAN • ЗИМНИЙ СЕЗОН",
     showSnowfall: true,
     backgroundImage:
-      "linear-gradient(140deg, rgba(10, 22, 38, 0.78) 0%, rgba(8, 18, 32, 0.84) 52%, rgba(7, 14, 24, 0.92) 100%), url('/dark-winter-forest-snow-christmas-night-stars.jpg')",
+      `linear-gradient(140deg, rgba(10, 22, 38, 0.78) 0%, rgba(8, 18, 32, 0.84) 52%, rgba(7, 14, 24, 0.92) 100%), url('${WINTER_BACKGROUND_IMAGE}')`,
     overlayGradient:
       "linear-gradient(to bottom, rgba(8, 16, 28, 0.62), rgba(8, 16, 28, 0.46), rgba(8, 16, 28, 0.72))",
     backgroundOpacity: 0.25,
@@ -249,7 +253,7 @@ const THEMES: Record<SeasonalThemeId, SeasonalTheme> = {
     summaryLabel: "MDC CLAN • ЗИМНИЙ СЕЗОН",
     showSnowfall: true,
     backgroundImage:
-      "linear-gradient(140deg, rgba(12, 24, 42, 0.76) 0%, rgba(8, 18, 34, 0.84) 55%, rgba(7, 14, 28, 0.9) 100%), url('/dark-winter-forest-snow-christmas-night-stars.jpg')",
+      `linear-gradient(140deg, rgba(12, 24, 42, 0.76) 0%, rgba(8, 18, 34, 0.84) 55%, rgba(7, 14, 28, 0.9) 100%), url('${WINTER_BACKGROUND_IMAGE}')`,
     overlayGradient:
       "linear-gradient(to bottom, rgba(9, 16, 28, 0.62), rgba(9, 16, 28, 0.46), rgba(9, 16, 28, 0.72))",
     backgroundOpacity: 0.24,

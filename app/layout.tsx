@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { withBasePath } from "@/lib/base-path"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -13,10 +14,10 @@ export const metadata: Metadata = {
   generator: "v0.app",
   icons: {
     icon: [
-      { url: "/icon-dark-32x32.png", type: "image/png" },
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: withBasePath("/icon-dark-32x32.png"), type: "image/png" },
+      { url: withBasePath("/icon.svg"), type: "image/svg+xml" },
     ],
-    apple: "/apple-icon.png",
+    apple: withBasePath("/apple-icon.png"),
   },
 }
 

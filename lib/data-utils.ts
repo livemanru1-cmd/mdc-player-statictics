@@ -973,11 +973,6 @@ export function getBestMatches(playerStats: PlayerEventStat[], events: GameEvent
   return matches
 }
 
-export function getSteamAvatarUrl(steamId: string): string {
-  const normalizedSteamId = steamId.trim()
-  return normalizedSteamId ? `/api/steam/avatar/${normalizedSteamId}` : "/placeholder-user.jpg"
-}
-
 export const EVENT_TYPE_ICONS: Record<string, { icon: string; name: string }> = {
   "🏆": { icon: "🏆", name: "ТУРНИР" },
   "⚔️": { icon: "⚔️", name: "SKIRMISH" },

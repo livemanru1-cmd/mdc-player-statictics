@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { User } from "lucide-react"
+import { getSteamAvatarFallbackUrl, resolveSteamAvatarUrl } from "@/lib/steam-avatar"
 
 interface PlayerAvatarProps {
   steamId: string
@@ -11,6 +12,7 @@ interface PlayerAvatarProps {
 }
 
 export function PlayerAvatar({ steamId, nickname, size = "md", className = "" }: PlayerAvatarProps) {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [error, setError] = useState(false)
 
   const sizeClasses = {
@@ -25,12 +27,38 @@ export function PlayerAvatar({ steamId, nickname, size = "md", className = "" }:
     lg: "w-8 h-8",
   }
 
-  const normalizedSteamId = steamId.trim()
-  const avatarUrl = normalizedSteamId ? `/api/steam/avatar/${normalizedSteamId}` : null
-
   useEffect(() => {
+    let isActive = true
+    const normalizedSteamId = steamId.trim()
+
     setError(false)
-  }, [avatarUrl])
+    setAvatarUrl(null)
+
+    if (!normalizedSteamId) {
+      setError(true)
+      return () => {
+        isActive = false
+      }
+    }
+
+    resolveSteamAvatarUrl(normalizedSteamId).then((resolvedUrl) => {
+      if (!isActive) {
+        return
+      }
+
+      if (resolvedUrl) {
+        setAvatarUrl(resolvedUrl)
+        setError(false)
+        return
+      }
+
+      setError(true)
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [steamId])
 
   if (error || !avatarUrl) {
     return (
@@ -42,9 +70,11 @@ export function PlayerAvatar({ steamId, nickname, size = "md", className = "" }:
 
   return (
     <img
-      src={avatarUrl || "/placeholder.svg"}
+      src={avatarUrl || getSteamAvatarFallbackUrl()}
       alt={nickname}
       className={`${sizeClasses[size]} rounded-full object-cover ring-2 ring-christmas-gold/30 ${className}`}
+      loading="lazy"
+      referrerPolicy="no-referrer"
       onError={() => setError(true)}
     />
   )

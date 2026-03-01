@@ -1,6 +1,7 @@
 import { type MDCData, type GameEvent, type PlayerEventStat, type Player, type Clan, type MDCDictionaries } from "./data-utils"
 
-const API_BASE = process.env.NEXT_PUBLIC_MDC_API_BASE ?? "/api/mdc"
+const DEFAULT_API_BASE = "https://api.hungryfishteam.org/gas/mdc"
+const API_BASE = (process.env.NEXT_PUBLIC_MDC_API_BASE ?? DEFAULT_API_BASE).replace(/\/$/, "")
 const DEFAULT_API_TIMEOUT_MS = (() => {
   const parsed = Number(process.env.NEXT_PUBLIC_MDC_API_TIMEOUT_MS ?? "30000")
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 30000

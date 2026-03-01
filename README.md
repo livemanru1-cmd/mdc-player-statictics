@@ -15,7 +15,7 @@
   - авто/баланс-раскладка по ролям и статам
   - ручная коррекция слотов после генерации
 - Авто-смена сезонной/праздничной темы по календарю РФ.
-- Прокси для аватарок Steam через Next API (обход CORS + кэш на сервере).
+- Полностью браузерная модель данных (без серверных API route-ов проекта).
 
 ## Требования
 
@@ -63,18 +63,36 @@ pnpm dev
 
 Приложение: `http://localhost:3000`.
 
+## GitHub Pages
+
+Репозиторий уже готов к деплою на GitHub Pages через workflow:
+
+- `.github/workflows/deploy-pages.yml`
+
+Что нужно сделать в репозитории GitHub:
+
+1. `Settings -> Pages -> Build and deployment -> Source: GitHub Actions`
+2. Запушить в `main` (или запустить `Deploy GitHub Pages` вручную из Actions)
+
+Workflow сам выставляет:
+
+- `STATIC_EXPORT=true`
+- `NEXT_PUBLIC_BASE_PATH=/<repo-name>`
+
+и публикует содержимое `out/`.
+
 ## Источник данных и синхронизация
 
-Фронтенд ходит в API через локальный proxy route:
+Фронтенд ходит напрямую в публичный API:
 
-- `/api/mdc/all`
-- `/api/mdc/pages`
-- `/api/mdc/events`
-- `/api/mdc/players`
-- `/api/mdc/playersevents`
-- `/api/mdc/clans`
-- `/api/mdc/dictionaries`
-- `/api/mdc/player?playerNickname=<nickname>`
+- `https://api.hungryfishteam.org/gas/mdc/all`
+- `https://api.hungryfishteam.org/gas/mdc/pages`
+- `https://api.hungryfishteam.org/gas/mdc/events`
+- `https://api.hungryfishteam.org/gas/mdc/players`
+- `https://api.hungryfishteam.org/gas/mdc/playersevents?page=N`
+- `https://api.hungryfishteam.org/gas/mdc/clans`
+- `https://api.hungryfishteam.org/gas/mdc/dictionaries`
+- `https://api.hungryfishteam.org/gas/mdc/player?playerNickname=<nickname>`
 
 ### Важное поведение кэша
 
@@ -95,20 +113,22 @@ pnpm dev
 
 Поддерживаемые env:
 
-- `NEXT_PUBLIC_MDC_API_BASE` (по умолчанию `/api/mdc`)
+- `NEXT_PUBLIC_MDC_API_BASE` (по умолчанию `https://api.hungryfishteam.org/gas/mdc`)
 - `NEXT_PUBLIC_MDC_API_TIMEOUT_MS` (по умолчанию `30000`)
 - `NEXT_PUBLIC_MDC_API_RETRY_ATTEMPTS` (по умолчанию `2`)
 - `NEXT_PUBLIC_MDC_API_BACKOFF_BASE_MS` (по умолчанию `500`)
 - `NEXT_PUBLIC_MDC_API_BACKOFF_MAX_MS` (по умолчанию `5000`)
+- `NEXT_PUBLIC_STEAM_PROFILE_PROXY_BASE` (по умолчанию `https://api.codetabs.com/v1/proxy/?quest=`)
+- `NEXT_PUBLIC_BASE_PATH` (нужно для Pages, например `/<repo-name>`)
+- `STATIC_EXPORT=true` (включает `output: export`)
 
 ## Аватарки Steam
 
-Используется route `app/api/steam/avatar/[steamId]/route.ts`:
+Аватарки резолвятся в браузере:
 
-- запрашивает avatar URL из Steam profile XML,
-- кеширует URL и изображение на стороне Next.js,
-- отдает placeholder при ошибке/некорректном `steamId`,
-- снижает CORS-проблемы в браузере.
+- запрашивается `steamcommunity.com/profiles/<steamId>?xml=1` через публичный CORS proxy,
+- URL аватарки извлекается из `<avatarFull>` и кешируется в памяти клиента,
+- при ошибке/некорректном `steamId` показывается placeholder.
 
 ## Сборка сквадов
 
@@ -135,6 +155,9 @@ pnpm dev
 pnpm build
 pnpm start
 pnpm lint
+
+# локально собрать как GitHub Pages
+STATIC_EXPORT=true NEXT_PUBLIC_BASE_PATH=/mdc-player-statictics pnpm build
 ```
 
 ## Docker-файлы
@@ -149,4 +172,4 @@ pnpm lint
   - увеличить `NEXT_PUBLIC_MDC_API_TIMEOUT_MS`
   - увеличить `NEXT_PUBLIC_MDC_API_RETRY_ATTEMPTS`
 - API из Postman работает, а в браузере нет:
-  - использовать только локальный proxy `/api/mdc/*`, не прямые вызовы cross-origin из UI.
+  - проверить CORS ответа API и ограничения публичного proxy для Steam-аватарок.
