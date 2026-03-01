@@ -317,6 +317,154 @@ function extractDateFromEventId(eventId: string): string | null {
   return `${yyyy}-${mm}-${dd}T${hh}:${min}:00`
 }
 
+function extractEventIdPart(eventId: string, index: number): string | null {
+  const parts = eventId
+    .split("|")
+    .map((part) => part.trim())
+    .filter(Boolean)
+  return parts[index] ?? null
+}
+
+function getEventCoverageKey(eventId: string): string {
+  const parts = eventId
+    .split("|")
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length >= 3) {
+    return normalizeKey(parts.slice(0, 3).join(" | "))
+  }
+
+  return normalizeKey(eventId)
+}
+
+function normalizeEventTypeFromEventId(eventId: string): string {
+  const rawType = extractEventIdPart(eventId, 0)?.trim() ?? ""
+  if (!rawType) {
+    return "Неизвестно"
+  }
+
+  const normalized = normalizeKey(rawType)
+  if (normalized.includes("skirmish")) return "⚔️ SKIRMISH"
+  if (normalized.includes("турнир") || normalized.includes("tournament")) return "🏆 ТУРНИР"
+  if (normalized.includes("clanmix")) return "🏹 CLANMIX"
+  if (normalized.includes("трениров") || normalized.includes("training")) return "🎯 Тренировка"
+  if (normalized.includes("ивент") || normalized.includes("event")) return "🎈 ИВЕНТ"
+  if (normalized.includes("лекц") || normalized.includes("lecture")) return "📚 ЛЕКЦИЯ"
+
+  return rawType
+}
+
+function deriveMapFromEventId(eventId: string): string | null {
+  const source = extractEventIdPart(eventId, 2)
+  if (!source) {
+    return null
+  }
+
+  const withoutMode = source.replace(
+    /\s+(?:AAS|RAAS|Invasion|Skirmish|Rivals|Destruction|TC|Insurgency|Seed)\b.*$/i,
+    "",
+  )
+
+  const normalized = withoutMode.trim().replace(/\s{2,}/g, " ")
+  return normalized || source.trim() || null
+}
+
+function parseFactionsFromEventId(eventId: string): { faction_1: string | null; faction_2: string | null; opponent: string | null } {
+  const versus = extractEventIdPart(eventId, 3)?.trim()
+  if (!versus) {
+    return { faction_1: null, faction_2: null, opponent: null }
+  }
+
+  const parts = versus
+    .split(/\s+vs\s+/i)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length >= 2) {
+    return {
+      faction_1: parts[0] ?? null,
+      faction_2: parts[1] ?? null,
+      opponent: versus,
+    }
+  }
+
+  return {
+    faction_1: null,
+    faction_2: null,
+    opponent: versus,
+  }
+}
+
+function buildFallbackEventsFromPlayerStats(playerStats: PlayerEventStat[]): GameEvent[] {
+  const eventMap = new Map<string, { event: GameEvent; uniquePlayers: Set<string> }>()
+
+  playerStats.forEach((stat) => {
+    const eventId = toString(stat.event_id, "").trim()
+    if (!eventId) {
+      return
+    }
+
+    const eventKey = getEventCoverageKey(eventId)
+    if (!eventKey) {
+      return
+    }
+
+    const startedAt = extractDateFromEventId(eventId) ?? "1970-01-01T00:00:00"
+    const eventType = normalizeEventTypeFromEventId(eventId)
+    const map = deriveMapFromEventId(eventId)
+    const factions = parseFactionsFromEventId(eventId)
+
+    let entry = eventMap.get(eventKey)
+    if (!entry) {
+      entry = {
+        event: {
+          event_id: eventId,
+          started_at: startedAt,
+          event_type: eventType,
+          map,
+          mode: null,
+          faction_1: factions.faction_1,
+          faction_2: factions.faction_2,
+          team_size: null,
+          enemy_size: null,
+          tickets_1: null,
+          tickets_2: null,
+          score: null,
+          result: null,
+          is_win: null,
+          mdc_players: 0,
+          ally_players: null,
+          opponent: factions.opponent,
+          cast_url: null,
+        },
+        uniquePlayers: new Set<string>(),
+      }
+      eventMap.set(eventKey, entry)
+    } else {
+      // Keep the richer source fields if they appear in subsequent rows.
+      if (!entry.event.map && map) entry.event.map = map
+      if (entry.event.event_type === "Неизвестно" && eventType) entry.event.event_type = eventType
+      if (!entry.event.faction_1 && factions.faction_1) entry.event.faction_1 = factions.faction_1
+      if (!entry.event.faction_2 && factions.faction_2) entry.event.faction_2 = factions.faction_2
+      if (!entry.event.opponent && factions.opponent) entry.event.opponent = factions.opponent
+      if (entry.event.started_at === "1970-01-01T00:00:00" && startedAt !== "1970-01-01T00:00:00") {
+        entry.event.started_at = startedAt
+      }
+    }
+
+    const playerId = toString(stat.player_id, "").trim()
+    if (playerId) {
+      entry.uniquePlayers.add(playerId)
+      entry.event.mdc_players = entry.uniquePlayers.size
+    }
+  })
+
+  return Array.from(eventMap.values())
+    .map(({ event }) => event)
+    .sort((a, b) => a.started_at.localeCompare(b.started_at))
+}
+
 function extractDateFromVerboseString(dateString: string): string | null {
   const match = dateString.match(/^[A-Za-z]{3}\s+([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4})/)
   if (!match) {
@@ -678,7 +826,7 @@ export function normalizeMDCData(payload: unknown): MDCData {
 
   const playerLookup = buildPlayerLookup(players)
 
-  const events = Array.from(
+  let events = Array.from(
     new Map(
       rawEvents
         .map((value) => normalizeEvent(toRecord(value) ?? {}))
@@ -690,6 +838,10 @@ export function normalizeMDCData(payload: unknown): MDCData {
   const playerEventStats = rawPlayerEventStats
     .map((value) => normalizePlayerEventStat(toRecord(value) ?? {}, playerLookup))
     .filter((stat) => stat.event_id && stat.player_id)
+
+  if (events.length === 0 && playerEventStats.length > 0) {
+    events = buildFallbackEventsFromPlayerStats(playerEventStats)
+  }
 
   const clans = Array.from(
     new Map(
