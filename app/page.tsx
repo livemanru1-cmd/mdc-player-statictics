@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { startTransition, useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,7 @@ import { SquadBuilder } from "@/components/squad-builder"
 import { Snowfall } from "@/components/snowfall"
 import { SeasonalHeader } from "@/components/seasonal-header"
 import { OverallStatsPanel } from "@/components/overall-stats-panel"
+import { EventsExplorer } from "@/components/events-explorer"
 import {
   type MDCData,
   type Player,
@@ -40,6 +41,8 @@ import {
   getWeeklyParticipation,
   getSLStats,
   getTopByRole,
+  getPastGames,
+  getPlayerGameHistory,
   getPlayerProgress,
   getBestMatches,
   getUniqueTags,
@@ -372,8 +375,10 @@ export default function YearReviewPage() {
   const [rawData, setRawData] = useState<MDCData | null>(null)
   const [seasonalTheme, setSeasonalTheme] = useState<SeasonalTheme>(() => getSeasonalTheme())
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [activeTab, setActiveTab] = useState("leaderboards")
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [selectedPlayersForChart, setSelectedPlayersForChart] = useState<string[]>([])
+  const [gameFocusTarget, setGameFocusTarget] = useState<{ eventId: string; playerId: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -700,6 +705,10 @@ export default function YearReviewPage() {
   )
   const slStats = useMemo(() => (data ? getSLStats(data.player_event_stats, data.events, data.players) : []), [data])
   const bestMatches = useMemo(() => (data ? getBestMatches(data.player_event_stats, data.events, 10) : []), [data])
+  const pastGames = useMemo(
+    () => (data ? getPastGames(data.events, data.player_event_stats, data.players, data.dictionaries?.squads ?? []) : []),
+    [data],
+  )
 
   const roleLeaderboards = useMemo(() => {
     if (!data) return []
@@ -756,6 +765,17 @@ export default function YearReviewPage() {
     const players = Array.isArray(data.players) ? data.players : []
     return players.filter((p) => selectedPlayers.includes(p.player_id))
   }, [data, selectedPlayers])
+
+  const selectedPlayerHistories = useMemo(() => {
+    const selectedIds = Array.from(new Set([...selectedPlayers, ...selectedPlayersForChart]))
+    const historyByPlayerId = new Map<string, ReturnType<typeof getPlayerGameHistory>>()
+
+    selectedIds.forEach((playerId) => {
+      historyByPlayerId.set(playerId, getPlayerGameHistory(playerId, pastGames, 20))
+    })
+
+    return historyByPlayerId
+  }, [pastGames, selectedPlayers, selectedPlayersForChart])
 
   const activePlayers = useMemo(() => {
     if (!data) return []
@@ -841,6 +861,13 @@ export default function YearReviewPage() {
     }
     return icons[role] || <Users className="w-4 h-4" />
   }
+
+  const handleOpenGame = useCallback((eventId: string, playerId: string) => {
+    startTransition(() => {
+      setActiveTab("games")
+      setGameFocusTarget({ eventId, playerId })
+    })
+  }, [])
 
   if (loading) {
     return (
@@ -1069,7 +1096,7 @@ export default function YearReviewPage() {
         </section>
 
         {/* Tabs for different views - Removed export tab */}
-        <Tabs defaultValue="leaderboards" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="w-full flex flex-wrap justify-start gap-2 bg-transparent border-0 h-auto p-0">
             <TabsTrigger
               value="leaderboards"
@@ -1094,6 +1121,12 @@ export default function YearReviewPage() {
               className="flex-1 min-w-[140px] py-3 px-4 text-sm font-medium rounded-lg border-2 border-blue-500/30 bg-blue-500/10 text-christmas-snow data-[state=active]:bg-blue-500 data-[state=active]:border-blue-500 data-[state=active]:text-white hover:bg-blue-500/20 transition-all"
             >
               Прогресс игрока
+            </TabsTrigger>
+            <TabsTrigger
+              value="games"
+              className="flex-1 min-w-[140px] py-3 px-4 text-sm font-medium rounded-lg border-2 border-cyan-500/30 bg-cyan-500/10 text-christmas-snow data-[state=active]:bg-cyan-500 data-[state=active]:border-cyan-500 data-[state=active]:text-slate-950 hover:bg-cyan-500/20 transition-all"
+            >
+              Игры
             </TabsTrigger>
             <TabsTrigger
               value="individual"
@@ -1259,6 +1292,17 @@ export default function YearReviewPage() {
             </div>
           </TabsContent>
 
+          <TabsContent value="games" className="space-y-4">
+            <EventsExplorer
+              games={pastGames}
+              players={data.players}
+              squadDomain={data.dictionaries?.squads ?? []}
+              pinnedPlayerIds={selectedPlayers}
+              onPinnedPlayersChange={setSelectedPlayers}
+              focusTarget={gameFocusTarget}
+            />
+          </TabsContent>
+
           {/* Player Progress Tab */}
           <TabsContent value="progress" className="space-y-4">
             <Card className="border-christmas-gold/20">
@@ -1288,6 +1332,8 @@ export default function YearReviewPage() {
                       avgValues={avgValues}
                       maxRoleKD={maxRoleKD}
                       playerStats={data.player_event_stats}
+                      matchHistory={selectedPlayerHistories.get(player.player_id) ?? []}
+                      onOpenGame={handleOpenGame}
                     />
                   </div>
                 ))}
@@ -1336,6 +1382,8 @@ export default function YearReviewPage() {
                     avgValues={avgValues}
                     maxRoleKD={maxRoleKD}
                     playerStats={data.player_event_stats}
+                    matchHistory={selectedPlayerHistories.get(player.player_id) ?? []}
+                    onOpenGame={handleOpenGame}
                   />
                 ))}
               </div>

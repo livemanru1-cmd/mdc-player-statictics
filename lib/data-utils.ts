@@ -1,3 +1,5 @@
+import { getFactionMatchup, getSquadLabel, getSquadLabels } from "@/lib/squad-utils"
+
 export interface MDCData {
   meta: {
     generated_at: string
@@ -940,29 +942,388 @@ export function getTopByRole(
     .slice(0, limit)
 }
 
-export function getPlayerProgress(playerId: string, playerStats: PlayerEventStat[], events: GameEvent[]) {
-  const eventLookup = new Map(events.map((event) => [normalizeEventId(event.event_id), event]))
+export interface AggregatedPlayerEventStat extends PlayerEventStat {
+  normalized_event_id: string
+  roles: string[]
+  specializations: string[]
+  squads: number[]
+  records: number
+}
 
-  const stats = playerStats
-    .filter((s) => s.player_id === playerId)
-    .map((s) => {
-      const event = eventLookup.get(normalizeEventId(s.event_id))
-      return { ...s, date: event?.started_at || extractDateFromEventId(s.event_id) || "" }
+export interface PastGamePlayerStat extends AggregatedPlayerEventStat {
+  steam_id: string
+  impactScore: number
+  impactShare: number
+  rank: number
+  squad_label: string
+  squad_labels: string[]
+}
+
+export interface PastGameSummary {
+  event_id: string
+  normalized_event_id: string
+  started_at: string
+  event_type: string
+  map: string
+  mode: string | null
+  faction_1: string | null
+  faction_2: string | null
+  faction_matchup: string | null
+  opponent: string | null
+  result: string | null
+  is_win: boolean | null
+  cast_url: string | null
+  participants: number
+  mdc_players: number
+  ally_players: number | null
+  enemy_size: number | null
+  team_size: number | null
+  totalKills: number
+  totalDeaths: number
+  totalDowns: number
+  totalRevives: number
+  totalVehicle: number
+  players: PastGamePlayerStat[]
+  topPerformer: PastGamePlayerStat | null
+}
+
+export interface PlayerGameHistoryEntry {
+  player_id: string
+  event_id: string
+  normalized_event_id: string
+  started_at: string
+  event_type: string
+  map: string
+  opponent: string | null
+  result: string | null
+  is_win: boolean | null
+  participants: number
+  rank: number
+  kills: number
+  deaths: number
+  downs: number
+  revives: number
+  vehicle: number
+  kd: number
+  kda: number
+  role: string
+  roles: string[]
+  squad_no: number
+  squad_label: string
+  squads: number[]
+  squad_labels: string[]
+  impactScore: number
+  impactShare: number
+  cumKD: number
+  cumKills: number
+  cumDeaths: number
+}
+
+function calculateImpactScore(stat: Pick<PlayerEventStat, "kills" | "downs" | "revives" | "vehicle" | "deaths">): number {
+  const rawScore = stat.kills * 5 + stat.downs * 3 + stat.revives * 2 + stat.vehicle * 4 - stat.deaths * 1.5
+  return Math.max(0, Math.round(rawScore))
+}
+
+function compareMatchPlayers(left: PastGamePlayerStat, right: PastGamePlayerStat): number {
+  if (right.impactScore !== left.impactScore) return right.impactScore - left.impactScore
+  if (right.kills !== left.kills) return right.kills - left.kills
+  if (right.downs !== left.downs) return right.downs - left.downs
+  if (right.revives !== left.revives) return right.revives - left.revives
+  if (left.deaths !== right.deaths) return left.deaths - right.deaths
+  return left.nickname.localeCompare(right.nickname, "ru")
+}
+
+function aggregatePlayerEventStats(playerStats: PlayerEventStat[]): AggregatedPlayerEventStat[] {
+  const aggregated = new Map<
+    string,
+    {
+      event_id: string
+      normalized_event_id: string
+      player_id: string
+      nickname: string
+      tag: string
+      squad_no: number
+      roles: Set<string>
+      specializations: Set<string>
+      squads: Set<number>
+      revives: number
+      downs: number
+      kills: number
+      deaths: number
+      vehicle: number
+      records: number
+    }
+  >()
+
+  playerStats.forEach((stat) => {
+    const normalizedEventId = normalizeEventId(stat.event_id)
+    if (!normalizedEventId || !stat.player_id) return
+
+    const key = `${normalizedEventId}::${stat.player_id}`
+    if (!aggregated.has(key)) {
+      aggregated.set(key, {
+        event_id: stat.event_id,
+        normalized_event_id: normalizedEventId,
+        player_id: stat.player_id,
+        nickname: stat.nickname,
+        tag: stat.tag,
+        squad_no: stat.squad_no,
+        roles: new Set<string>(),
+        specializations: new Set<string>(),
+        squads: new Set<number>(),
+        revives: 0,
+        downs: 0,
+        kills: 0,
+        deaths: 0,
+        vehicle: 0,
+        records: 0,
+      })
+    }
+
+    const current = aggregated.get(key)
+    if (!current) return
+
+    current.records += 1
+    current.revives += stat.revives
+    current.downs += stat.downs
+    current.kills += stat.kills
+    current.deaths += stat.deaths
+    current.vehicle += stat.vehicle
+
+    const role = stat.role?.trim()
+    if (role) current.roles.add(role)
+
+    const specialization = stat.specialization?.trim()
+    if (specialization) current.specializations.add(specialization)
+
+    if (Number.isFinite(stat.squad_no) && stat.squad_no > 0) {
+      current.squads.add(stat.squad_no)
+    }
+  })
+
+  return Array.from(aggregated.values()).map((entry) => {
+    const roles = Array.from(entry.roles.values())
+    const specializations = Array.from(entry.specializations.values())
+    const squads = Array.from(entry.squads.values()).sort((a, b) => a - b)
+    const kd = entry.deaths > 0 ? entry.kills / entry.deaths : entry.kills
+    const kda = entry.deaths > 0 ? entry.downs / entry.deaths : entry.downs
+
+    return {
+      event_id: entry.event_id,
+      normalized_event_id: entry.normalized_event_id,
+      player_id: entry.player_id,
+      nickname: entry.nickname,
+      tag: entry.tag,
+      squad_no: squads[0] ?? entry.squad_no,
+      role: roles.join(" / "),
+      specialization: specializations.join(" / "),
+      revives: entry.revives,
+      downs: entry.downs,
+      kills: entry.kills,
+      deaths: entry.deaths,
+      vehicle: entry.vehicle,
+      kd,
+      kda,
+      roles,
+      specializations,
+      squads,
+      records: entry.records,
+    }
+  })
+}
+
+export function getPastGames(
+  events: GameEvent[],
+  playerStats: PlayerEventStat[],
+  players: Player[],
+  squadDomain: string[] = [],
+): PastGameSummary[] {
+  const eventLookup = new Map(events.map((event) => [normalizeEventId(event.event_id), event]))
+  const playerLookup = new Map(players.map((player) => [player.player_id, player]))
+  const aggregatedStats = aggregatePlayerEventStats(playerStats)
+  const statsByEvent = new Map<string, AggregatedPlayerEventStat[]>()
+
+  aggregatedStats.forEach((stat) => {
+    if (!statsByEvent.has(stat.normalized_event_id)) {
+      statsByEvent.set(stat.normalized_event_id, [])
+    }
+    statsByEvent.get(stat.normalized_event_id)?.push(stat)
+  })
+
+  const eventKeys = Array.from(
+    new Set([...events.map((event) => normalizeEventId(event.event_id)), ...statsByEvent.keys()]),
+  ).filter(Boolean)
+
+  return eventKeys
+    .map((eventKey) => {
+      const event = eventLookup.get(eventKey)
+      const eventStats = statsByEvent.get(eventKey) ?? []
+      const fallbackEventId = event?.event_id || eventStats[0]?.event_id || eventKey
+      const startedAt = event?.started_at || extractDateFromEventId(fallbackEventId) || ""
+      const eventType = event?.event_type || extractEventIdPart(fallbackEventId, 0) || "Событие"
+      const map = event?.map || deriveMapFromEventId(fallbackEventId)
+      const opponent = event?.opponent || extractEventIdPart(fallbackEventId, 1)
+      const fallbackVersus = extractEventIdPart(fallbackEventId, 3)
+      const fallbackFactionParts = (fallbackVersus ?? "")
+        .split(/\s+vs\s+/i)
+        .map((value) => value.trim())
+        .filter(Boolean)
+      const faction1 = event?.faction_1 ?? fallbackFactionParts[0] ?? null
+      const faction2 = event?.faction_2 ?? fallbackFactionParts[1] ?? null
+      const factionMatchup = getFactionMatchup(faction1, faction2)
+
+      const playersWithRank = eventStats
+        .map<PastGamePlayerStat>((stat) => {
+          const player = playerLookup.get(stat.player_id)
+          const squadLabels = getSquadLabels(stat.squads, squadDomain)
+          const squadLabel = getSquadLabel(stat.squad_no, squadDomain)
+          return {
+            ...stat,
+            nickname: player?.nickname || stat.nickname || "Unknown",
+            tag: player?.tag || stat.tag || "",
+            steam_id: player?.steam_id || "",
+            impactScore: calculateImpactScore(stat),
+            impactShare: 0,
+            rank: 0,
+            squad_label: squadLabel,
+            squad_labels: squadLabels.length > 0 ? squadLabels : [squadLabel],
+          }
+        })
+        .sort(compareMatchPlayers)
+
+      const topImpact = playersWithRank[0]?.impactScore ?? 0
+      const rankedPlayers = playersWithRank.map((stat, index) => ({
+        ...stat,
+        rank: index + 1,
+        impactShare: topImpact > 0 ? (stat.impactScore / topImpact) * 100 : 0,
+      }))
+
+      return {
+        event_id: fallbackEventId,
+        normalized_event_id: eventKey,
+        started_at: startedAt,
+        event_type: eventType,
+        map,
+        mode: event?.mode || null,
+        faction_1: faction1,
+        faction_2: faction2,
+        faction_matchup: factionMatchup,
+        opponent,
+        result: event?.result ?? null,
+        is_win: event?.is_win ?? null,
+        cast_url: event?.cast_url ?? null,
+        participants: rankedPlayers.length,
+        mdc_players: event?.mdc_players ?? rankedPlayers.length,
+        ally_players: event?.ally_players ?? null,
+        enemy_size: event?.enemy_size ?? null,
+        team_size: event?.team_size ?? null,
+        totalKills: rankedPlayers.reduce((sum, stat) => sum + stat.kills, 0),
+        totalDeaths: rankedPlayers.reduce((sum, stat) => sum + stat.deaths, 0),
+        totalDowns: rankedPlayers.reduce((sum, stat) => sum + stat.downs, 0),
+        totalRevives: rankedPlayers.reduce((sum, stat) => sum + stat.revives, 0),
+        totalVehicle: rankedPlayers.reduce((sum, stat) => sum + stat.vehicle, 0),
+        players: rankedPlayers,
+        topPerformer: rankedPlayers[0] ?? null,
+      }
     })
-    .filter((s) => s.date)
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .sort((left, right) => {
+      const leftTime = parseSafeDate(left.started_at)?.getTime() ?? 0
+      const rightTime = parseSafeDate(right.started_at)?.getTime() ?? 0
+      if (rightTime !== leftTime) return rightTime - leftTime
+      return left.event_id.localeCompare(right.event_id, "ru")
+    })
+}
+
+export function getPlayerGameHistory(
+  playerId: string,
+  games: PastGameSummary[],
+  limit = 8,
+): PlayerGameHistoryEntry[] {
+  const chronologicalGames = games
+    .map((game) => {
+      const playerGame = game.players.find((stat) => stat.player_id === playerId)
+      if (!playerGame) return null
+
+      return {
+        player_id: playerId,
+        event_id: game.event_id,
+        normalized_event_id: game.normalized_event_id,
+        started_at: game.started_at,
+        event_type: game.event_type,
+        map: game.map,
+        opponent: game.opponent,
+        result: game.result,
+        is_win: game.is_win,
+        participants: game.participants,
+        rank: playerGame.rank,
+        kills: playerGame.kills,
+        deaths: playerGame.deaths,
+        downs: playerGame.downs,
+        revives: playerGame.revives,
+        vehicle: playerGame.vehicle,
+        kd: playerGame.kd,
+        kda: playerGame.kda,
+        role: playerGame.role,
+        roles: playerGame.roles,
+        squad_no: playerGame.squad_no,
+        squad_label: playerGame.squad_label,
+        squads: playerGame.squads,
+        squad_labels: playerGame.squad_labels,
+        impactScore: playerGame.impactScore,
+        impactShare: playerGame.impactShare,
+      }
+    })
+    .filter((entry): entry is Omit<PlayerGameHistoryEntry, "cumKD" | "cumKills" | "cumDeaths"> => entry !== null)
+    .sort((left, right) => {
+      const leftTime = parseSafeDate(left.started_at)?.getTime() ?? 0
+      const rightTime = parseSafeDate(right.started_at)?.getTime() ?? 0
+      if (leftTime !== rightTime) return leftTime - rightTime
+      return left.event_id.localeCompare(right.event_id, "ru")
+    })
 
   let cumKills = 0
   let cumDeaths = 0
-  return stats.map((s, i) => {
-    cumKills += s.kills
-    cumDeaths += s.deaths
+
+  return chronologicalGames
+    .map((entry) => {
+      cumKills += entry.kills
+      cumDeaths += entry.deaths
+
+      return {
+        ...entry,
+        cumKD: cumDeaths > 0 ? cumKills / cumDeaths : cumKills,
+        cumKills,
+        cumDeaths,
+      }
+    })
+    .reverse()
+    .slice(0, limit)
+}
+
+export function getPlayerProgress(playerId: string, playerStats: PlayerEventStat[], events: GameEvent[]) {
+  const eventLookup = new Map(events.map((event) => [normalizeEventId(event.event_id), event]))
+
+  const stats = aggregatePlayerEventStats(playerStats)
+    .filter((stat) => stat.player_id === playerId)
+    .map((stat) => {
+      const event = eventLookup.get(stat.normalized_event_id)
+      return { ...stat, date: event?.started_at || extractDateFromEventId(stat.event_id) || "" }
+    })
+    .filter((stat) => stat.date)
+    .sort((left, right) => left.date.localeCompare(right.date))
+
+  let cumKills = 0
+  let cumDeaths = 0
+  return stats.map((stat, index) => {
+    cumKills += stat.kills
+    cumDeaths += stat.deaths
+
     return {
-      game: i + 1,
-      date: toDateKey(s.date),
-      kills: s.kills,
-      deaths: s.deaths,
-      kd: s.deaths > 0 ? s.kills / s.deaths : s.kills,
+      game: index + 1,
+      date: toDateKey(stat.date),
+      kills: stat.kills,
+      deaths: stat.deaths,
+      kd: stat.kd,
       cumKD: cumDeaths > 0 ? cumKills / cumDeaths : cumKills,
       cumKills,
       cumDeaths,
@@ -973,26 +1334,24 @@ export function getPlayerProgress(playerId: string, playerStats: PlayerEventStat
 export function getBestMatches(playerStats: PlayerEventStat[], events: GameEvent[], limit = 10) {
   const eventLookup = new Map(events.map((event) => [normalizeEventId(event.event_id), event]))
 
-  const matches = playerStats
-    .filter((s) => s.deaths > 0 || s.kills > 0)
-    .map((s) => {
-      const event = eventLookup.get(normalizeEventId(s.event_id))
-      const fallbackEventType = extractEventIdPart(s.event_id, 0) || ""
-      const fallbackMap = deriveMapFromEventId(s.event_id)
-      const fallbackDate = extractDateFromEventId(s.event_id) || ""
+  return aggregatePlayerEventStats(playerStats)
+    .filter((stat) => stat.deaths > 0 || stat.kills > 0)
+    .map((stat) => {
+      const event = eventLookup.get(stat.normalized_event_id)
+      const fallbackEventType = extractEventIdPart(stat.event_id, 0) || ""
+      const fallbackMap = deriveMapFromEventId(stat.event_id)
+      const fallbackDate = extractDateFromEventId(stat.event_id) || ""
 
       return {
-        ...s,
+        ...stat,
         eventType: event?.event_type || fallbackEventType,
         map: event?.map || fallbackMap,
         date: event?.started_at || fallbackDate,
         isWin: event?.is_win ?? null,
       }
     })
-    .sort((a, b) => b.kd - a.kd)
+    .sort((left, right) => right.kd - left.kd)
     .slice(0, limit)
-
-  return matches
 }
 
 export const EVENT_TYPE_ICONS: Record<string, { icon: string; name: string }> = {

@@ -1,12 +1,20 @@
 "use client"
 
-import { useRef } from "react"
+import { useMemo, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PlayerAvatar } from "@/components/player-avatar"
+import { PlayerMatchHistory } from "@/components/player-match-history"
 import { PlayerRadarChart } from "@/components/player-radar-chart"
-import { type Player, type PlayerEventStat, type RelativeThresholds, getPlayerStrengths } from "@/lib/data-utils"
+import {
+  type Player,
+  type PlayerEventStat,
+  type PlayerGameHistoryEntry,
+  type RelativeThresholds,
+  getPlayerStrengths,
+} from "@/lib/data-utils"
+import { getSquadToneClasses } from "@/lib/squad-utils"
 import { Download, Trophy, Skull, Target, Heart, Crosshair, Sparkles, Car, Zap } from "lucide-react"
 import { toPng } from "html-to-image"
 
@@ -39,6 +47,8 @@ interface PlayerCardProps {
     kda: number
     win_rate: number
   }
+  matchHistory?: PlayerGameHistoryEntry[]
+  onOpenGame?: (eventId: string, playerId: string) => void
 }
 
 const DEFAULT_MAX_VALUES = {
@@ -76,9 +86,24 @@ export function PlayerCard({
   thresholds,
   maxValues = DEFAULT_MAX_VALUES,
   avgValues = DEFAULT_AVG_VALUES,
+  matchHistory = [],
+  onOpenGame,
 }: PlayerCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const strengths = getPlayerStrengths(player, thresholds)
+  const squadSummary = useMemo(() => {
+    const bySquad = new Map<string, number>()
+
+    matchHistory.forEach((entry) => {
+      const label = entry.squad_label?.trim() || "Без отряда"
+      bySquad.set(label, (bySquad.get(label) ?? 0) + 1)
+    })
+
+    return Array.from(bySquad.entries())
+      .map(([label, games]) => ({ label, games }))
+      .sort((left, right) => right.games - left.games)
+      .slice(0, 3)
+  }, [matchHistory])
 
   const handleExport = async () => {
     if (!cardRef.current) return
@@ -179,6 +204,22 @@ export function PlayerCard({
             </div>
           )}
 
+          {squadSummary.length > 0 && (
+            <div className="mb-4 space-y-2">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Отряды / цвета</p>
+              <div className="flex flex-wrap gap-1.5">
+                {squadSummary.map((squad) => {
+                  const tone = getSquadToneClasses(squad.label)
+                  return (
+                    <Badge key={squad.label} variant="outline" className={tone.badge}>
+                      {squad.label} • {squad.games}
+                    </Badge>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-2 mb-4">
             <PlayerRadarChart
               player={player}
@@ -198,6 +239,10 @@ export function PlayerCard({
               title="Навыки"
               type="skills"
             />
+          </div>
+
+          <div className="mb-4">
+            <PlayerMatchHistory playerId={player.player_id} games={matchHistory} onOpenGame={onOpenGame} />
           </div>
 
           <div className="pt-3 border-t border-christmas-gold/20 text-center flex items-center justify-center gap-2">
