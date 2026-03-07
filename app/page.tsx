@@ -776,6 +776,9 @@ export default function YearReviewPage() {
     return players.filter((p) => selectedPlayers.includes(p.player_id))
   }, [data, selectedPlayers])
 
+  const isSingleSelectedPlayer = selectedPlayerData.length === 1
+  const isSingleProgressSelection = selectedProgressEntries.length === 1
+
   const selectedPlayerHistories = useMemo(() => {
     const selectedIds = Array.from(new Set([...selectedPlayers, ...selectedPlayersForChart]))
     const historyByPlayerId = new Map<string, ReturnType<typeof getPlayerGameHistory>>()
@@ -1336,7 +1339,10 @@ export default function YearReviewPage() {
             {selectedProgressEntries.length > 0 && (
               <div className="space-y-4">
                 {selectedProgressEntries.map(({ player, progress }, index) => (
-                  <div key={player.player_id} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div
+                    key={player.player_id}
+                    className={isSingleProgressSelection ? "space-y-4" : "grid grid-cols-1 gap-4 lg:grid-cols-2"}
+                  >
                     <PlayerProgressChart data={progress} nickname={player.nickname} />
                     <PlayerCard
                       player={player}
@@ -1348,6 +1354,7 @@ export default function YearReviewPage() {
                       playerStats={data.player_event_stats}
                       matchHistory={selectedPlayerHistories.get(player.player_id) ?? []}
                       onOpenGame={handleOpenGame}
+                      layout={isSingleProgressSelection ? "expanded" : "compact"}
                     />
                   </div>
                 ))}
@@ -1385,7 +1392,11 @@ export default function YearReviewPage() {
             </Card>
 
             {selectedPlayerData.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div
+                className={
+                  isSingleSelectedPlayer ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+                }
+              >
                 {selectedPlayerData.map((player, index) => (
                   <PlayerCard
                     key={player.player_id}
@@ -1398,6 +1409,7 @@ export default function YearReviewPage() {
                     playerStats={data.player_event_stats}
                     matchHistory={selectedPlayerHistories.get(player.player_id) ?? []}
                     onOpenGame={handleOpenGame}
+                    layout={isSingleSelectedPlayer ? "expanded" : "compact"}
                   />
                 ))}
               </div>

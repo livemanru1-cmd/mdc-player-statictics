@@ -32,6 +32,7 @@ interface PlayerRadarChartProps {
   maxRoleKD: Record<string, number>
   title: string
   type: "roles" | "skills"
+  layout?: "compact" | "expanded"
 }
 
 export function PlayerRadarChart({
@@ -42,7 +43,9 @@ export function PlayerRadarChart({
   maxRoleKD,
   title,
   type,
+  layout = "compact",
 }: PlayerRadarChartProps) {
+  const isExpanded = layout === "expanded"
   const getScaledValue = (value: number, avg: number, max: number) => {
     if (max === 0) return 0
 
@@ -139,12 +142,12 @@ export function PlayerRadarChart({
 
   if (type === "roles" && rolesData.length === 0) {
     return (
-      <Card className="border-christmas-gold/20">
+      <Card className="h-full border-christmas-gold/20">
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium uppercase tracking-wider text-christmas-gold">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">
+          <div className={`${isExpanded ? "h-[220px]" : "h-[180px]"} flex items-center justify-center text-sm text-muted-foreground`}>
             Нет данных по ролям
           </div>
         </CardContent>
@@ -153,13 +156,13 @@ export function PlayerRadarChart({
   }
 
   return (
-    <Card className="border-christmas-gold/20">
+    <Card className="h-full border-christmas-gold/20">
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-medium uppercase tracking-wider text-christmas-gold">{title}</CardTitle>
         {type === "skills" && <p className="text-[10px] text-muted-foreground">50% = среднее, 100% = топ-1</p>}
       </CardHeader>
       <CardContent>
-        <div className="h-[180px]">
+        <div className={isExpanded ? "h-[220px]" : "h-[180px]"}>
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={data} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
               <PolarGrid stroke="var(--border)" />
