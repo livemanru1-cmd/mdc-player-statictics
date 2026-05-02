@@ -100,7 +100,7 @@ const GRAVE_FOUNDATION_LABEL = "12.12.2024"
 const NKLV_FOUNDATION_LABEL = "01.11.2022"
 const DCIA_FOUNDATION_LABEL = "09.04.2026"
 const CLAN_MOTTO = "С неба смерть и в этом сила, Mdc - непобедима!"
-const ANNIVERSARY_WINDOW_DAYS = 62
+const ANNIVERSARY_WINDOW_DAYS = 7
 const DEFAULT_ANTHEM_VOLUME = 20
 const SLIDE_INTERVAL_MS = 5000
 const SLIDE_FADE_MS = 280
@@ -175,27 +175,18 @@ function getClanTimeline(referenceDate: Date, foundation: ClanFoundationInfo): C
     (today.getMonth() === foundation.monthIndex && today.getDate() >= foundation.day)
 
   const lastAnniversaryYear = hasReachedAnniversaryThisYear ? today.getFullYear() : today.getFullYear() - 1
-  const nextAnniversaryYear = hasReachedAnniversaryThisYear ? today.getFullYear() + 1 : today.getFullYear()
 
   const lastAnniversaryDate = toUtcDate(lastAnniversaryYear, foundation.monthIndex, foundation.day)
-  const nextAnniversaryDate = toUtcDate(nextAnniversaryYear, foundation.monthIndex, foundation.day)
 
   const daysSinceLast = daysBetween(lastAnniversaryDate, today)
-  const daysUntilNext = daysBetween(today, nextAnniversaryDate)
 
   let celebrationLabel: string | null = null
 
-  if (daysSinceLast >= 0 && daysSinceLast <= ANNIVERSARY_WINDOW_DAYS) {
+  if (daysSinceLast >= 0 && daysSinceLast < ANNIVERSARY_WINDOW_DAYS) {
     const anniversaryAge = lastAnniversaryYear - foundation.year
 
     if (anniversaryAge > 0) {
       celebrationLabel = `${anniversaryAge} ${pluralize(anniversaryAge, "год", "года", "лет")}`
-    }
-  } else if (daysUntilNext >= 0 && daysUntilNext <= ANNIVERSARY_WINDOW_DAYS) {
-    const anniversaryAge = nextAnniversaryYear - foundation.year
-
-    if (anniversaryAge > 0) {
-      celebrationLabel = `Скоро ${anniversaryAge} ${pluralize(anniversaryAge, "год", "года", "лет")}`
     }
   }
 
