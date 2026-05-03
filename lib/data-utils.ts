@@ -214,6 +214,16 @@ function parseSafeDate(value: string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
+function getMondayWeekKey(date: Date): string {
+  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const firstDayOfYear = new Date(date.getFullYear(), 0, 1)
+  const mondayOffset = (firstDayOfYear.getDay() + 6) % 7
+  const firstWeekStart = new Date(date.getFullYear(), 0, 1 - mondayOffset)
+  const weekNum = Math.floor(Math.round((dayStart.getTime() - firstWeekStart.getTime()) / DAY_MS) / 7) + 1
+
+  return `${date.getFullYear()}-W${String(weekNum).padStart(2, "0")}`
+}
+
 export function getEventMatchupLabel(event: Pick<GameEvent, "faction_1" | "faction_2">): string {
   return getFactionMatchup(event.faction_1, event.faction_2)?.trim() ?? ""
 }
@@ -2713,6 +2723,8 @@ export function getWeeklyParticipation(
 ): { week: string; participants: number; uniqueParticipants: number }[] {
   const weekData: Record<string, Set<string>> = {}
   const eventLookup = new Map(events.map((event) => [getEventLinkKey(event.event_id), event]))
+  const now = new Date()
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
 
   playerStats.forEach((stat) => {
     const event = eventLookup.get(getEventLinkKey(stat.event_id))
@@ -2721,9 +2733,9 @@ export function getWeeklyParticipation(
 
     const date = parseSafeDate(eventDate)
     if (!date) return
-    const startOfYear = new Date(date.getFullYear(), 0, 1)
-    const weekNum = Math.ceil(((date.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7)
-    const weekKey = `${date.getFullYear()}-W${String(weekNum).padStart(2, "0")}`
+    if (date.getTime() > endOfToday.getTime()) return
+
+    const weekKey = getMondayWeekKey(date)
 
     if (!weekData[weekKey]) {
       weekData[weekKey] = new Set()
