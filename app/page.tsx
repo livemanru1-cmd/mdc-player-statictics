@@ -3041,6 +3041,7 @@ export default function YearReviewPage() {
             <SquadOverview
               games={groupPastGames}
               players={groupData?.players ?? data.players}
+              rosterPlayers={data.players}
               squadDomain={groupData?.dictionaries?.squads ?? data.dictionaries?.squads ?? []}
               onOpenGame={(eventId) => handleOpenGame(eventId, "")}
               onOpenPlayer={(playerId) => {

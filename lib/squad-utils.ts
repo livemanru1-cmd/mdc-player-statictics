@@ -170,15 +170,15 @@ export function getSquadToneClasses(label: string | null | undefined): {
       }
     case "black":
       return {
-        badge: "border-slate-500/40 bg-slate-800/60 text-slate-100",
-        panel: "border-slate-500/20 bg-slate-800/40",
-        dot: "bg-slate-300",
+        badge: "border-neutral-500/50 bg-neutral-950/70 text-neutral-100",
+        panel: "border-neutral-600/35 bg-neutral-950/55",
+        dot: "bg-neutral-950 ring-1 ring-neutral-400/80",
       }
     case "white":
       return {
-        badge: "border-zinc-300/40 bg-zinc-100/10 text-zinc-100",
-        panel: "border-zinc-300/20 bg-zinc-100/5",
-        dot: "bg-zinc-200",
+        badge: "border-white/70 bg-white/18 text-white",
+        panel: "border-white/45 bg-white/12",
+        dot: "bg-white ring-1 ring-slate-500/80",
       }
     default:
       return {

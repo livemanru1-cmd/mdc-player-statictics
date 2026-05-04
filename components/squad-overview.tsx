@@ -20,7 +20,7 @@ type SquadMetricKey = "games" | "avgRevives" | "avgHeals" | "avgDowns" | "avgKil
 type ChartMetricKey = Exclude<SquadMetricKey, "games"> | "mvpCount"
 type MetricDef = { key: SquadMetricKey; label: string; icon: AppMetricIconKey; digits?: number }
 type ChartMetricDef = { key: ChartMetricKey; label: string; icon: AppMetricIconKey; digits?: number }
-type SquadOverviewProps = { games: PastGameSummary[]; players: Player[]; squadDomain: string[]; onOpenGame?: (eventId: string) => void; onOpenPlayer?: (playerId: string) => void }
+type SquadOverviewProps = { games: PastGameSummary[]; players: Player[]; rosterPlayers?: Player[]; squadDomain: string[]; onOpenGame?: (eventId: string) => void; onOpenPlayer?: (playerId: string) => void }
 type SquadPlayerSummary = { player_id: string; nickname: string; tag: string; steam_id: string; games: number; wins: number; kills: number; deaths: number; downs: number; revives: number; heals: number; vehicle: number; avgElo: number; avgTbf: number; avgRating: number; kd: number; kda: number; popularRole: string; specialization: string; isSquadLeader: boolean }
 type SquadMatchSummary = { eventId: string; startedAt: string; map: string; mode: string | null; opponent: string | null; faction: string | null; result: string | null; isWin: boolean | null; players: number; kills: number; deaths: number; downs: number; revives: number; heals: number; vehicle: number; avgElo: number; kd: number; kda: number; isMvp: boolean }
 type DistributionSlice = { label: string; count: number; color: string }
@@ -28,7 +28,7 @@ type SquadSummary = { label: string; games: number; wins: number; kills: number;
 type ChartValueEntry = { key: string; name: string; color: string; value: number | null }
 type LockedChartValues = { label: string; eventLabel?: string; entries: ChartValueEntry[] }
 
-const SQUAD_COLORS: Record<SquadToneKey, string> = { red: "#fb7185", blue: "#38bdf8", green: "#34d399", yellow: "#fbbf24", orange: "#fb923c", purple: "#a78bfa", pink: "#f472b6", cyan: "#22d3ee", brown: "#b45309", black: "#cbd5e1", white: "#f8fafc", neutral: "#94a3b8" }
+const SQUAD_COLORS: Record<SquadToneKey, string> = { red: "#fb7185", blue: "#38bdf8", green: "#34d399", yellow: "#fbbf24", orange: "#fb923c", purple: "#a78bfa", pink: "#f472b6", cyan: "#22d3ee", brown: "#b45309", black: "#64748b", white: "#ffffff", neutral: "#94a3b8" }
 const SQUAD_ORDER: SquadToneKey[] = ["green", "red", "yellow", "blue", "purple", "orange", "brown", "black", "pink", "white"]
 const ROLE_COLORS = ["#fbbf24", "#38bdf8", "#34d399", "#fb7185", "#a78bfa", "#f472b6", "#22d3ee", "#fb923c"]
 const METRIC_DEFS: MetricDef[] = [
@@ -185,14 +185,14 @@ function ChartDynamicsPanel({ metric, left, right }: { metric: ChartMetricKey; l
   return <div className="rounded-xl border border-christmas-gold/20 bg-christmas-gold/10 p-3 text-sm"><div className="mb-2 space-y-1"><p className="font-medium text-christmas-snow">{"\u0414\u0438\u043d\u0430\u043c\u0438\u043a\u0430 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f"}</p><p className="text-xs text-muted-foreground">{left.label}{left.eventLabel ? ` \u2022 ${left.eventLabel}` : ""} {"\u2192"} {right.label}{right.eventLabel ? ` \u2022 ${right.eventLabel}` : ""}</p></div><div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">{dynamics.map((entry) => <div key={entry.key} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} /><span className="text-christmas-snow">{entry.name}</span><span className="text-muted-foreground">{formatChartMetric(metric, entry.from)} {"\u2192"} {formatChartMetric(metric, entry.to)}</span><span className={entry.delta >= 0 ? "font-medium text-christmas-green" : "font-medium text-christmas-red"}>{formatChartDelta(metric, entry.delta)}</span></div>)}</div></div>
 }
 
-export function SquadOverview({ games, players, squadDomain, onOpenGame, onOpenPlayer }: SquadOverviewProps) {
+export function SquadOverview({ games, players, rosterPlayers = players, squadDomain, onOpenGame, onOpenPlayer }: SquadOverviewProps) {
   const [chartMetric, setChartMetric] = useState<ChartMetricKey>("avgElo")
   const [hiddenSquadLabels, setHiddenSquadLabels] = useState<Set<string>>(() => new Set())
   const [isChartAutoPlaying, setIsChartAutoPlaying] = useState(true)
   const [autoSquadIndex, setAutoSquadIndex] = useState(0)
   const [lockedValues, setLockedValues] = useState<LockedChartValues[]>([])
   const { squads, chartData, chartLines } = useMemo(() => {
-    const playersById = new Map(players.map((p) => [p.player_id, p]))
+    const playersById = new Map(rosterPlayers.map((p) => [p.player_id, p]))
     type MP = Omit<SquadPlayerSummary, "avgElo" | "avgTbf" | "avgRating" | "kd" | "kda" | "popularRole" | "specialization"> & { elo: number; roles: string[]; specs: string[] }
     type MS = Omit<SquadSummary, "avgRevives" | "avgHeals" | "avgDowns" | "avgKills" | "avgDeaths" | "avgVehicle" | "avgElo" | "avgTbf" | "avgRating" | "kd" | "kda" | "playersRanked" | "leader" | "roleSlices" | "specializationSlices" | "recent" | "allMatches" | "bestMatch"> & { elo: number; players: Map<string, MP>; roles: Map<string, number>; specializations: Map<string, number>; matches: SquadMatchSummary[] }
     type ChartSquad = { label: string; matches: SquadMatchSummary[] }
@@ -223,8 +223,11 @@ export function SquadOverview({ games, players, squadDomain, onOpenGame, onOpenP
       if (!s.players.has(p.player_id)) s.players.set(p.player_id, { player_id: p.player_id, nickname: p.nickname, tag: p.tag, steam_id: p.steam_id, games: 0, wins: 0, kills: 0, deaths: 0, downs: 0, revives: 0, heals: 0, vehicle: 0, elo: 0, roles: [], specs: [] })
     }
 
-    squadDomain.map((x) => getSquadLabels([x], squadDomain)[0]?.trim()).filter((x): x is string => Boolean(x) && isVisibleSquadLabel(x)).forEach(ensure)
-    players.forEach((p) => getSquadLabels(p.teams ?? [], squadDomain).filter(isVisibleSquadLabel).forEach((label) => addRoster(label, p)))
+    squadDomain.map((x) => getSquadLabels([x], squadDomain)[0]?.trim()).filter((x): x is string => Boolean(x) && isVisibleSquadLabel(x)).forEach((label) => {
+      ensure(label)
+      ensureChart(label)
+    })
+    rosterPlayers.forEach((p) => getSquadLabels(p.teams ?? [], squadDomain).filter(isVisibleSquadLabel).forEach((label) => addRoster(label, p)))
 
     games.forEach((game) => {
       const groupedAll = new Map<string, PastGamePlayerStat[]>()
@@ -288,9 +291,7 @@ export function SquadOverview({ games, players, squadDomain, onOpenGame, onOpenP
     }).filter((squad) => squad.playersRanked.length > 0)
       .sort((a, b) => squadOrderIndex(a.label) - squadOrderIndex(b.label) || b.games - a.games || b.avgElo - a.avgElo || a.label.localeCompare(b.label, "ru"))
 
-    const chartSquads = [...chartBySquad.values()]
-      .filter((s) => s.matches.length > 0)
-      .sort((a, b) => squadOrderIndex(a.label) - squadOrderIndex(b.label) || a.label.localeCompare(b.label, "ru"))
+    const chartSquads = [...chartBySquad.values()].sort((a, b) => squadOrderIndex(a.label) - squadOrderIndex(b.label) || a.label.localeCompare(b.label, "ru"))
     const chartLines = chartSquads.map((s, i) => ({ label: s.label, key: `squad_${i}`, color: SQUAD_COLORS[getSquadToneKey(s.label)] }))
     const keyByLabel = new Map(chartLines.map((l) => [l.label, l.key]))
     const rows = new Map<string, Record<string, string | number>>()
@@ -302,7 +303,7 @@ export function SquadOverview({ games, players, squadDomain, onOpenGame, onOpenP
     })
     const chartData = [...rows.values()].sort((a, b) => new Date(String(a.fullDate)).getTime() - new Date(String(b.fullDate)).getTime())
     return { squads, chartData, chartLines }
-  }, [chartMetric, games, players, squadDomain])
+  }, [chartMetric, games, players, rosterPlayers, squadDomain])
 
   const selectedChartMetric = CHART_METRICS.find((m) => m.key === chartMetric) ?? CHART_METRICS[0]
   const autoChartLine = chartLines.length > 0 ? chartLines[autoSquadIndex % chartLines.length] : undefined

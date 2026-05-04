@@ -145,8 +145,8 @@ const SQUAD_LINE_COLORS: Record<string, string> = {
   pink: "#f472b6",
   cyan: "#22d3ee",
   brown: "#b45309",
-  black: "#cbd5e1",
-  white: "#f8fafc",
+  black: "#64748b",
+  white: "#ffffff",
   neutral: "#94a3b8",
 }
 
