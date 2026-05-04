@@ -219,7 +219,7 @@ function normalizeVehicleKey(value: string | number | null | undefined) {
 function getVehicleColor(value: string | null | undefined) {
   const normalized = String(value ?? "").trim().toUpperCase()
   const colors: Record<string, string> = {
-    BLACK: "#3f3f46",
+    BLACK: "#18181b",
     BLUE: "#0891b2",
     BROWN: "#7f1d1d",
     GREEN: "#047857",
@@ -227,7 +227,7 @@ function getVehicleColor(value: string | null | undefined) {
     PINK: "#db2777",
     PURPLE: "#6d28d9",
     RED: "#b91c1c",
-    WHITE: "#71717a",
+    WHITE: "#a1a1aa",
     YELLOW: "#ca8a04",
   }
   return colors[normalized] ?? "#52525b"
