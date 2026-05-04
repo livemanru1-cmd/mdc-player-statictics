@@ -77,7 +77,7 @@ const SQUAD_STYLES: Record<
   BROWN: { border: "border-amber-700/35", text: "text-amber-200", glow: "from-amber-700/18 via-amber-700/6 to-transparent", accent: "bg-amber-700", panel: "bg-amber-700/6", rowBorder: "border-amber-700/25", rowHover: "hover:border-amber-600/45" },
   BLACK: { border: "border-neutral-500/45", text: "text-neutral-100", glow: "from-neutral-700/42 via-neutral-600/16 to-transparent", accent: "bg-neutral-500", panel: "bg-neutral-700/18", rowBorder: "border-neutral-500/35", rowHover: "hover:border-neutral-300/50" },
   PINK: { border: "border-pink-500/35", text: "text-pink-200", glow: "from-pink-500/18 via-pink-500/6 to-transparent", accent: "bg-pink-500", panel: "bg-pink-500/6", rowBorder: "border-pink-500/25", rowHover: "hover:border-pink-400/45" },
-  WHITE: { border: "border-white/60", text: "text-white", glow: "from-white/42 via-slate-100/18 to-transparent", accent: "bg-white", panel: "bg-white/20", rowBorder: "border-white/38", rowHover: "hover:border-white/70" },
+  WHITE: { border: "border-slate-100/52", text: "text-slate-50", glow: "from-slate-100/36 via-slate-200/14 to-transparent", accent: "bg-slate-100", panel: "bg-slate-100/16", rowBorder: "border-slate-100/34", rowHover: "hover:border-slate-50/62" },
 }
 
 const VEHICLE_ICON_BY_LABEL: Record<string, string> = {
@@ -227,7 +227,7 @@ function getVehicleColor(value: string | null | undefined) {
     PINK: "#db2777",
     PURPLE: "#6d28d9",
     RED: "#b91c1c",
-    WHITE: "#cbd5e1",
+    WHITE: "#bfc9d6",
     YELLOW: "#ca8a04",
   }
   return colors[normalized] ?? "#52525b"
