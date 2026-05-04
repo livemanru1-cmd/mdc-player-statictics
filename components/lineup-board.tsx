@@ -479,7 +479,7 @@ function SquadTable({
           const nameContent = (
             <span className="flex w-full min-w-0 items-center gap-2">
               {tag ? <span className="shrink-0">{tag}</span> : null}
-              {nickname ? <ScrollingLineupText className="flex-1 text-christmas-snow">{nickname}</ScrollingLineupText> : null}
+              {nickname ? <ScrollingLineupText className="flex-1 transition-colors group-hover:text-christmas-gold group-focus-visible:text-christmas-gold">{nickname}</ScrollingLineupText> : null}
             </span>
           )
 
@@ -542,7 +542,7 @@ function SquadTable({
                           <button
                             type="button"
                             onClick={() => onOpenPlayer?.(matchedPlayer.player_id)}
-                            className="block w-full min-w-0 text-left transition-colors hover:text-christmas-gold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-christmas-gold"
+                            className="group block w-full min-w-0 text-left transition-colors hover:text-christmas-gold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-christmas-gold focus-visible:text-christmas-gold"
                           >
                             {nameContent}
                           </button>
