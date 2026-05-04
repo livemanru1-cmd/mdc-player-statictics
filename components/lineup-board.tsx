@@ -227,7 +227,7 @@ function getVehicleColor(value: string | null | undefined) {
     PINK: "#db2777",
     PURPLE: "#6d28d9",
     RED: "#b91c1c",
-    WHITE: "#bfc9d6",
+    WHITE: "#8b95a1",
     YELLOW: "#ca8a04",
   }
   return colors[normalized] ?? "#52525b"
