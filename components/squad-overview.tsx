@@ -311,11 +311,18 @@ export function SquadOverview({ games, players, rosterPlayers = players, squadDo
   const visibleChartLines = isChartAutoPlaying
     ? (autoChartLine ? [autoChartLine] : [])
     : chartLines.filter((line) => !hiddenSquadLabels.has(line.label))
+  const isAllChartSquadsSelected = !isChartAutoPlaying && chartLines.length > 0 && chartLines.every((line) => !hiddenSquadLabels.has(line.label))
   const stopChartAuto = () => {
     if (!isChartAutoPlaying) return
     setIsChartAutoPlaying(false)
     if (!currentAutoLineLabel) return
     setHiddenSquadLabels(new Set(chartLines.filter((line) => line.label !== currentAutoLineLabel).map((line) => line.label)))
+  }
+  const toggleAllChartSquads = () => {
+    const fallbackLabel = currentAutoLineLabel ?? chartLines[0]?.label
+    stopChartAuto()
+    setHiddenSquadLabels(isAllChartSquadsSelected && fallbackLabel ? new Set(chartLines.filter((line) => line.label !== fallbackLabel).map((line) => line.label)) : new Set())
+    setLockedValues([])
   }
   const toggleChartSquad = (label: string) => { stopChartAuto(); setHiddenSquadLabels((current) => { const next = new Set(current); if (next.has(label)) next.delete(label); else next.add(label); return next }); setLockedValues([]) }
   const handleChartMetricChange = (value: ChartMetricKey) => { stopChartAuto(); setChartMetric(value); setLockedValues([]) }
@@ -405,7 +412,7 @@ export function SquadOverview({ games, players, rosterPlayers = players, squadDo
         <CardHeader className="gap-3 pb-3 md:flex-row md:items-center md:justify-between"><div><CardTitle className="flex items-center gap-2 text-base text-christmas-snow"><Swords className="h-4 w-4 text-christmas-gold" />Сравнение отрядов</CardTitle></div><Select value={chartMetric} onValueChange={(v) => handleChartMetricChange(v as ChartMetricKey)}><SelectTrigger className="w-full border-christmas-gold/20 bg-background/50 text-christmas-snow md:w-[190px]"><SelectValue /></SelectTrigger><SelectContent>{CHART_METRICS.map((m) => <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>)}</SelectContent></Select></CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => { stopChartAuto(); setHiddenSquadLabels(new Set()); setLockedValues([]) }} className="rounded-md border border-christmas-gold/30 px-2 py-1 text-xs text-christmas-gold hover:bg-christmas-gold/10">Все отряды</button>
+            <button type="button" onClick={toggleAllChartSquads} className={cn("rounded-md border px-2 py-1 text-xs transition-colors", isAllChartSquadsSelected ? "border-christmas-gold bg-christmas-gold text-black hover:bg-christmas-gold/90" : "border-christmas-gold/30 text-christmas-gold hover:bg-christmas-gold hover:text-black")}>Все отряды</button>
             {chartLines.map((line) => {
               const hidden = isChartAutoPlaying ? line.label !== autoChartLine?.label : hiddenSquadLabels.has(line.label)
               return <button key={line.key} type="button" onClick={() => toggleChartSquad(line.label)} className={cn("inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs transition-colors", hidden ? "border-border/50 text-muted-foreground opacity-55" : "border-border/60 bg-background/30 text-christmas-snow hover:border-christmas-gold/40")}><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: line.color }} />{line.label}</button>
