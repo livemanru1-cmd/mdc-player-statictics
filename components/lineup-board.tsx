@@ -227,14 +227,10 @@ function getVehicleColor(value: string | null | undefined) {
     PINK: "#db2777",
     PURPLE: "#6d28d9",
     RED: "#b91c1c",
-    WHITE: "#f8fafc",
+    WHITE: "#71717a",
     YELLOW: "#ca8a04",
   }
   return colors[normalized] ?? "#52525b"
-}
-
-function isWhiteVehicleColor(value: string | null | undefined) {
-  return String(value ?? "").trim().toUpperCase() === "WHITE"
 }
 
 function getVehicleIconAsset(vehicle: string | number | null | undefined) {
@@ -441,7 +437,7 @@ function VehicleIconBadge({ vehicle, color }: { vehicle: string; color?: string 
       className="inline-flex h-7 w-7 items-center justify-center rounded-[4px] border border-white/20 shadow-sm"
       style={{ backgroundColor: getVehicleColor(color) }}
     >
-      {icon ? <Image src={icon} alt="" width={20} height={20} className={cn("h-5 w-5 object-contain", isWhiteVehicleColor(color) && "brightness-0")} unoptimized /> : null}
+      {icon ? <Image src={icon} alt="" width={20} height={20} className="h-5 w-5 object-contain" unoptimized /> : null}
     </span>
   )
 }
