@@ -229,8 +229,8 @@ function getNthWeekdayOfMonth(year: number, monthIndex: number, weekday: number,
 }
 
 function holidayCountriesForKey(key: string): HolidayCountry[] | null {
-  if (CLAN_HOLIDAY_KEYS.has(key) || GENERAL_HOLIDAY_KEYS.has(key)) return null
-  if (COMMON_HOLIDAY_KEYS.has(key)) return ["ru", "by"]
+  if (CLAN_HOLIDAY_KEYS.has(key) || COMMON_HOLIDAY_KEYS.has(key)) return ["ru", "by"]
+  if (GENERAL_HOLIDAY_KEYS.has(key)) return null
   if (BELARUS_HOLIDAY_KEYS.has(key)) return ["by"]
   return ["ru"]
 }
@@ -262,7 +262,11 @@ function getHoliday(date: Date, filter: HolidayFilter = "all"): HolidayInfo | nu
     const holiday = { label: "День матери РФ", nonWorking: false, countries: ["ru"] } satisfies HolidayInfo
     return holidayMatchesFilter(date, holiday, filter) ? holiday : null
   }
-  const holiday = HOLIDAYS_BY_MONTH_DAY[formatMonthDayKey(date)] ?? null
+  const key = formatMonthDayKey(date)
+  const holiday = HOLIDAYS_BY_MONTH_DAY[key] ?? null
+  if (holiday && key === "12-12" && filter === "by") {
+    return { ...holiday, label: "День основания GRAVE" }
+  }
   return holiday && holidayMatchesFilter(date, holiday, filter) ? holiday : null
 }
 
@@ -876,24 +880,26 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex flex-col items-center gap-1 md:items-end">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Праздники</span>
-            <div className="flex items-center rounded-md border border-christmas-gold/20 bg-background/45 p-0.5">
-              {HOLIDAY_FILTERS.map((filter) => (
-                <button
-                  key={filter.value}
-                  type="button"
-                  onClick={() => setHolidayFilter(filter.value)}
-                  className={cn(
-                    "rounded px-3 py-1.5 text-xs font-semibold transition-colors",
-                    holidayFilter === filter.value
-                      ? "bg-christmas-gold text-slate-950"
-                      : "text-christmas-gold hover:bg-christmas-gold/10 hover:text-christmas-gold",
-                  )}
-                >
-                  {filter.label}
-                </button>
-              ))}
+          <div className="flex justify-center md:justify-end">
+            <div className="flex w-fit flex-col items-center gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Праздники</span>
+              <div className="flex items-center rounded-md border border-christmas-gold/20 bg-background/45 p-0.5">
+                {HOLIDAY_FILTERS.map((filter) => (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setHolidayFilter(filter.value)}
+                    className={cn(
+                      "rounded px-3 py-1.5 text-xs font-semibold transition-colors",
+                      holidayFilter === filter.value
+                        ? "bg-christmas-gold text-slate-950"
+                        : "text-christmas-gold hover:bg-christmas-gold/10 hover:text-christmas-gold",
+                    )}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
