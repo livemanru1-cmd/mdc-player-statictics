@@ -861,6 +861,34 @@ function mergeMDCData(older: MDCData, newer: MDCData): MDCData {
   }
 }
 
+function preserveCachedPlayerStatsWhenRefreshIsEmpty(previous: MDCData | null, current: MDCData): MDCData {
+  if (!previous || current.player_event_stats.length > 0 || previous.player_event_stats.length === 0) {
+    return current
+  }
+
+  const currentEventKeys = new Set(current.events.map((event) => normalizeTextKey(event.event_id ?? "")).filter(Boolean))
+  if (currentEventKeys.size === 0) {
+    return current
+  }
+
+  const playerEventStats = previous.player_event_stats.filter((stat) => currentEventKeys.has(normalizeTextKey(stat.event_id ?? "")))
+  if (playerEventStats.length === 0) {
+    return current
+  }
+
+  return {
+    ...current,
+    player_event_stats: playerEventStats,
+    meta: {
+      ...current.meta,
+      counts: {
+        ...current.meta.counts,
+        player_event_stats: playerEventStats.length,
+      },
+    },
+  }
+}
+
 function pickMoreCompleteData(left: MDCData | null, right: MDCData | null): MDCData | null {
   if (!left) return right
   if (!right) return left
@@ -1090,7 +1118,8 @@ export default function YearReviewPage() {
       const previousDataForReport = resetCache
         ? null
         : pickMoreCompleteData(rawDataRef.current, cached?.data ?? null)
-      const finalData = forceRefresh ? normalizedData : previousDataForReport ? mergeMDCData(previousDataForReport, normalizedData) : normalizedData
+      const refreshedData = forceRefresh ? preserveCachedPlayerStatsWhenRefreshIsEmpty(previousDataForReport, normalizedData) : normalizedData
+      const finalData = forceRefresh ? refreshedData : previousDataForReport ? mergeMDCData(previousDataForReport, refreshedData) : refreshedData
       const syncReport = buildSyncReport(previousDataForReport, finalData, resetCache, latestProgress, startedAt)
 
       setRawData(finalData)
