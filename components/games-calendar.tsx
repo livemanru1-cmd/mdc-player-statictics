@@ -56,6 +56,10 @@ type CalendarGame = {
   isSideSwap: boolean
 }
 
+type HolidayFilter = "all" | "ru" | "by"
+type HolidayCountry = Exclude<HolidayFilter, "all">
+type HolidayInfo = { label: string; nonWorking: boolean; countries?: HolidayCountry[] }
+
 const WEEK_DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 const LINEUP_API_BASE = (process.env.NEXT_PUBLIC_MDC_API_BASE ?? "https://api.hungryfishteam.org/gas/mdc").replace(/\/$/, "")
 const LINEUP_API_URL = `${LINEUP_API_BASE}/lineup?publish=true`
@@ -74,7 +78,7 @@ const MONTH_NAMES = [
   "Ноябрь",
   "Декабрь",
 ]
-const HOLIDAYS_BY_MONTH_DAY: Record<string, { label: string; nonWorking: boolean }> = {
+const HOLIDAYS_BY_MONTH_DAY: Record<string, HolidayInfo> = {
   "01-01": { label: "Новый год / Новы год", nonWorking: true },
   "01-02": { label: "Новогодние каникулы", nonWorking: true },
   "01-03": { label: "Новогодние каникулы", nonWorking: true },
@@ -138,6 +142,15 @@ const HOLIDAYS_BY_MONTH_DAY: Record<string, { label: string; nonWorking: boolean
   "12-25": { label: "Католическое Рождество", nonWorking: true },
   "12-27": { label: "День спасателя", nonWorking: false },
 }
+const HOLIDAY_FILTERS: Array<{ value: HolidayFilter; label: string }> = [
+  { value: "all", label: "Все" },
+  { value: "ru", label: "РФ" },
+  { value: "by", label: "РБ" },
+]
+const BELARUS_HOLIDAY_KEYS = new Set(["03-15", "04-02", "04-26", "07-03", "09-17", "10-14", "11-07", "12-25"])
+const COMMON_HOLIDAY_KEYS = new Set(["01-01", "01-02", "01-07", "03-08", "05-01", "05-09"])
+const GENERAL_HOLIDAY_KEYS = new Set(["02-14", "05-15", "06-01", "10-01", "10-28"])
+const CLAN_HOLIDAY_KEYS = new Set(["04-09", "04-29", "11-01", "12-12"])
 const EVENT_TYPE_ICONS: Array<[string, LucideIcon]> = [
   ["skirmish", Swords],
   ["training", Shield],
@@ -215,29 +228,46 @@ function getNthWeekdayOfMonth(year: number, monthIndex: number, weekday: number,
   return date
 }
 
+function holidayCountriesForKey(key: string): HolidayCountry[] | null {
+  if (CLAN_HOLIDAY_KEYS.has(key) || GENERAL_HOLIDAY_KEYS.has(key)) return null
+  if (COMMON_HOLIDAY_KEYS.has(key)) return ["ru", "by"]
+  if (BELARUS_HOLIDAY_KEYS.has(key)) return ["by"]
+  return ["ru"]
+}
+
+function holidayMatchesFilter(date: Date, holiday: HolidayInfo, filter: HolidayFilter): boolean {
+  if (filter === "all") return true
+  const countries = holiday.countries ?? holidayCountriesForKey(formatMonthDayKey(date))
+  return countries !== null && countries.includes(filter)
+}
+
 function isWeekend(date: Date): boolean {
   const day = date.getDay()
   return day === 0 || day === 6
 }
 
-function getHoliday(date: Date): { label: string; nonWorking: boolean } | null {
+function getHoliday(date: Date, filter: HolidayFilter = "all"): HolidayInfo | null {
   const radunitsa = getRadunitsaDate(date.getFullYear())
   if (formatDayKey(date) === formatDayKey(radunitsa)) {
-    return { label: "Радуница", nonWorking: true }
+    const holiday = { label: "Радуница", nonWorking: true, countries: ["by"] } satisfies HolidayInfo
+    return holidayMatchesFilter(date, holiday, filter) ? holiday : null
   }
   const fathersDay = getNthWeekdayOfMonth(date.getFullYear(), 9, 0, 3)
   if (formatDayKey(date) === formatDayKey(fathersDay)) {
-    return { label: "День отца", nonWorking: false }
+    const holiday = { label: "День отца", nonWorking: false, countries: ["ru"] } satisfies HolidayInfo
+    return holidayMatchesFilter(date, holiday, filter) ? holiday : null
   }
   const mothersDay = getLastWeekdayOfMonth(date.getFullYear(), 10, 0)
   if (formatDayKey(date) === formatDayKey(mothersDay)) {
-    return { label: "День матери РФ", nonWorking: false }
+    const holiday = { label: "День матери РФ", nonWorking: false, countries: ["ru"] } satisfies HolidayInfo
+    return holidayMatchesFilter(date, holiday, filter) ? holiday : null
   }
-  return HOLIDAYS_BY_MONTH_DAY[formatMonthDayKey(date)] ?? null
+  const holiday = HOLIDAYS_BY_MONTH_DAY[formatMonthDayKey(date)] ?? null
+  return holiday && holidayMatchesFilter(date, holiday, filter) ? holiday : null
 }
 
-function isNonWorkingDay(date: Date): boolean {
-  return isWeekend(date) || getHoliday(date)?.nonWorking === true
+function isNonWorkingDay(date: Date, filter: HolidayFilter = "all"): boolean {
+  return isWeekend(date) || getHoliday(date, filter)?.nonWorking === true
 }
 
 function minuteKey(value: string): string {
@@ -629,6 +659,7 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
   })
   const [monthPickerOpen, setMonthPickerOpen] = useState(false)
   const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear())
+  const [holidayFilter, setHolidayFilter] = useState<HolidayFilter>("all")
   const [lineupAvailability, setLineupAvailability] = useState<LineupAvailability | null>(null)
   const focusedButtonRef = useRef<HTMLButtonElement | null>(null)
   const weekRefs = useRef<Array<HTMLDivElement | null>>([])
@@ -842,6 +873,23 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
           <Button type="button" variant="outline" size="sm" className="!border !border-christmas-gold/45 bg-background/50 text-christmas-gold hover:!border-christmas-gold/70 hover:bg-christmas-gold/10 hover:text-christmas-gold" onClick={() => goToMonth(1)}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <div className="flex items-center rounded-md border border-christmas-gold/20 bg-background/45 p-0.5">
+            {HOLIDAY_FILTERS.map((filter) => (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setHolidayFilter(filter.value)}
+                className={cn(
+                  "rounded px-3 py-1.5 text-xs font-semibold transition-colors",
+                  holidayFilter === filter.value
+                    ? "bg-christmas-gold text-slate-950"
+                    : "text-christmas-gold hover:bg-christmas-gold/10 hover:text-christmas-gold",
+                )}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -871,8 +919,8 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
                 const dayGames = gamesByDay.get(dayKey) ?? []
                 const isCurrentMonth = day.getMonth() === month.getMonth()
                 const isToday = dayKey === formatDayKey(new Date())
-                const holiday = getHoliday(day)
-                const nonWorkingDay = isNonWorkingDay(day)
+                const holiday = getHoliday(day, holidayFilter)
+                const nonWorkingDay = isNonWorkingDay(day, holidayFilter)
                 const tooltipSide: "right" | "left" = dayIndex >= 4 ? "left" : "right"
 
                 return (
