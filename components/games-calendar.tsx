@@ -823,72 +823,78 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
             Календарь событий
           </CardTitle>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button type="button" variant="outline" size="sm" className="!border !border-christmas-gold/45 bg-background/50 text-christmas-gold hover:!border-christmas-gold/70 hover:bg-christmas-gold/10 hover:text-christmas-gold" onClick={() => goToMonth(-1)}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setPickerYear(month.getFullYear())
-                setMonthPickerOpen((open) => !open)
-              }}
-              className="min-w-[220px] rounded-md border border-christmas-gold/20 bg-background/50 px-4 py-2 text-center text-base font-semibold text-christmas-snow hover:bg-christmas-gold/10"
-            >
-              {formatMonthTitle(month)}
-            </button>
-            {monthPickerOpen ? (
-              <div className="absolute left-1/2 top-full z-30 mt-2 w-[300px] -translate-x-1/2 rounded-lg border border-christmas-gold/20 bg-card/95 p-3 shadow-xl shadow-black/30">
-                <div className="mb-3 flex items-center justify-between">
-                  <Button type="button" variant="outline" size="sm" className="!border !border-christmas-gold/45 bg-background/50 text-christmas-gold hover:!border-christmas-gold/70 hover:bg-christmas-gold/10 hover:text-christmas-gold" onClick={() => setPickerYear((year) => year - 1)}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-base font-semibold text-christmas-snow">{pickerYear}</span>
-                  <Button type="button" variant="outline" size="sm" className="!border !border-christmas-gold/45 bg-background/50 text-christmas-gold hover:!border-christmas-gold/70 hover:bg-christmas-gold/10 hover:text-christmas-gold" onClick={() => setPickerYear((year) => year + 1)}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {MONTH_NAMES.map((name, index) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => {
-                        setMonth(new Date(pickerYear, index, 1))
-                        setMonthPickerOpen(false)
-                      }}
-                      className={cn(
-                        "rounded-md border border-border/50 bg-background/35 px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:border-christmas-gold/40 hover:text-christmas-snow",
-                        pickerYear === month.getFullYear() && index === month.getMonth() && "border-christmas-gold/60 bg-christmas-gold/10 text-christmas-snow",
-                      )}
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-          <Button type="button" variant="outline" size="sm" className="!border !border-christmas-gold/45 bg-background/50 text-christmas-gold hover:!border-christmas-gold/70 hover:bg-christmas-gold/10 hover:text-christmas-gold" onClick={() => goToMonth(1)}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center rounded-md border border-christmas-gold/20 bg-background/45 p-0.5">
-            {HOLIDAY_FILTERS.map((filter) => (
+        <div className="grid items-end gap-3 md:grid-cols-[1fr_auto_1fr]">
+          <div className="hidden md:block" />
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button type="button" variant="outline" size="sm" className="!border !border-christmas-gold/45 bg-background/50 text-christmas-gold hover:!border-christmas-gold/70 hover:bg-christmas-gold/10 hover:text-christmas-gold" onClick={() => goToMonth(-1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="relative">
               <button
-                key={filter.value}
                 type="button"
-                onClick={() => setHolidayFilter(filter.value)}
-                className={cn(
-                  "rounded px-3 py-1.5 text-xs font-semibold transition-colors",
-                  holidayFilter === filter.value
-                    ? "bg-christmas-gold text-slate-950"
-                    : "text-christmas-gold hover:bg-christmas-gold/10 hover:text-christmas-gold",
-                )}
+                onClick={() => {
+                  setPickerYear(month.getFullYear())
+                  setMonthPickerOpen((open) => !open)
+                }}
+                className="min-w-[220px] rounded-md border border-christmas-gold/20 bg-background/50 px-4 py-2 text-center text-base font-semibold text-christmas-snow hover:bg-christmas-gold/10"
               >
-                {filter.label}
+                {formatMonthTitle(month)}
               </button>
-            ))}
+              {monthPickerOpen ? (
+                <div className="absolute left-1/2 top-full z-30 mt-2 w-[300px] -translate-x-1/2 rounded-lg border border-christmas-gold/20 bg-card/95 p-3 shadow-xl shadow-black/30">
+                  <div className="mb-3 flex items-center justify-between">
+                    <Button type="button" variant="outline" size="sm" className="!border !border-christmas-gold/45 bg-background/50 text-christmas-gold hover:!border-christmas-gold/70 hover:bg-christmas-gold/10 hover:text-christmas-gold" onClick={() => setPickerYear((year) => year - 1)}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-base font-semibold text-christmas-snow">{pickerYear}</span>
+                    <Button type="button" variant="outline" size="sm" className="!border !border-christmas-gold/45 bg-background/50 text-christmas-gold hover:!border-christmas-gold/70 hover:bg-christmas-gold/10 hover:text-christmas-gold" onClick={() => setPickerYear((year) => year + 1)}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {MONTH_NAMES.map((name, index) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => {
+                          setMonth(new Date(pickerYear, index, 1))
+                          setMonthPickerOpen(false)
+                        }}
+                        className={cn(
+                          "rounded-md border border-border/50 bg-background/35 px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:border-christmas-gold/40 hover:text-christmas-snow",
+                          pickerYear === month.getFullYear() && index === month.getMonth() && "border-christmas-gold/60 bg-christmas-gold/10 text-christmas-snow",
+                        )}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <Button type="button" variant="outline" size="sm" className="!border !border-christmas-gold/45 bg-background/50 text-christmas-gold hover:!border-christmas-gold/70 hover:bg-christmas-gold/10 hover:text-christmas-gold" onClick={() => goToMonth(1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex flex-col items-center gap-1 md:items-end">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Праздники</span>
+            <div className="flex items-center rounded-md border border-christmas-gold/20 bg-background/45 p-0.5">
+              {HOLIDAY_FILTERS.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => setHolidayFilter(filter.value)}
+                  className={cn(
+                    "rounded px-3 py-1.5 text-xs font-semibold transition-colors",
+                    holidayFilter === filter.value
+                      ? "bg-christmas-gold text-slate-950"
+                      : "text-christmas-gold hover:bg-christmas-gold/10 hover:text-christmas-gold",
+                  )}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </CardHeader>
