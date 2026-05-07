@@ -25,6 +25,7 @@ type UnknownRecord = Record<string, unknown>
 export interface FetchApiOptions {
   forceRefresh?: boolean
   publish?: boolean
+  skipPagedStats?: boolean
   onProgress?: (progress: SyncProgressUpdate) => void
 }
 
@@ -1199,7 +1200,9 @@ export async function fetchAllData(options: FetchApiOptions = {}): Promise<MDCDa
     message: "Инициализация синхронизации...",
   })
 
-  const pagedRawStatsPromise = fetchPagedPlayerEventStatsRaw(options).catch(() => [])
+  const pagedRawStatsPromise = options.skipPagedStats
+    ? Promise.resolve<unknown[]>([])
+    : fetchPagedPlayerEventStatsRaw(options).catch(() => [])
   const teamsPayloadPromise = fetchTeamsPayload(options).catch(() => null)
   let allError: unknown = null
   let normalizedFromAll: MDCData | null = null
