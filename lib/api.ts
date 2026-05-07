@@ -26,6 +26,7 @@ export interface FetchApiOptions {
   forceRefresh?: boolean
   publish?: boolean
   skipPagedStats?: boolean
+  preferSplitEndpoints?: boolean
   onProgress?: (progress: SyncProgressUpdate) => void
 }
 
@@ -1208,63 +1209,71 @@ export async function fetchAllData(options: FetchApiOptions = {}): Promise<MDCDa
   let normalizedFromAll: MDCData | null = null
   let rootFromAll: UnknownRecord | null = null
 
-  try {
-    reportSyncProgress(options, {
-      stage: "all",
-      percent: 12,
-      message: "Загружаем базовый срез /all...",
-    })
-    const payload = await fetchJsonWithOptions(`${API_BASE}/all`, options)
-    rootFromAll = toRecord(parseMaybeJson(payload))
-    normalizedFromAll = applyTeamsToData(normalizeMDCData(payload), await teamsPayloadPromise)
-    reportSyncProgress(options, {
-      stage: "all",
-      percent: 22,
-      message: "Базовый срез получен",
-    })
-
+  if (!options.preferSplitEndpoints) {
     try {
-      const pagedRawStats = await pagedRawStatsPromise
-      if (pagedRawStats.length > 0) {
-        reportSyncProgress(options, {
-          stage: "merge",
-          percent: 93,
-          message: "Объединяем базовый срез и протокол страниц...",
-        })
-        const mergedWithPagedStats = normalizeMDCData({
-          events: rootFromAll?.events ?? [],
-          players: rootFromAll?.players ?? [],
-          clans: rootFromAll?.clans ?? [],
-          dictionaries: rootFromAll?.dictionaries ?? {},
-          meta: rootFromAll?.meta ?? {},
-          playersEvents: pagedRawStats,
-        })
-        const mergedWithExplicitTeams = applyTeamsToData(mergedWithPagedStats, await teamsPayloadPromise)
-
-        if (compareCompleteness(normalizedFromAll, mergedWithExplicitTeams) > 0) {
-          normalizedFromAll = mergedWithExplicitTeams
-        }
-      }
-    } catch {
-      // Keep /all result if paged protocol is unavailable.
-    }
-
-    if (
-      normalizedFromAll.events.length > 0 ||
-      normalizedFromAll.players.length > 0 ||
-      normalizedFromAll.player_event_stats.length > 0 ||
-      normalizedFromAll.clans.length > 0
-    ) {
       reportSyncProgress(options, {
-        stage: "done",
-        percent: 100,
-        message: "Синхронизация завершена",
+        stage: "all",
+        percent: 12,
+        message: "Загружаем базовый срез /all...",
       })
-      return normalizedFromAll
+      const payload = await fetchJsonWithOptions(`${API_BASE}/all`, options)
+      rootFromAll = toRecord(parseMaybeJson(payload))
+      normalizedFromAll = applyTeamsToData(normalizeMDCData(payload), await teamsPayloadPromise)
+      reportSyncProgress(options, {
+        stage: "all",
+        percent: 22,
+        message: "Базовый срез получен",
+      })
+
+      try {
+        const pagedRawStats = await pagedRawStatsPromise
+        if (pagedRawStats.length > 0) {
+          reportSyncProgress(options, {
+            stage: "merge",
+            percent: 93,
+            message: "Объединяем базовый срез и протокол страниц...",
+          })
+          const mergedWithPagedStats = normalizeMDCData({
+            events: rootFromAll?.events ?? [],
+            players: rootFromAll?.players ?? [],
+            clans: rootFromAll?.clans ?? [],
+            dictionaries: rootFromAll?.dictionaries ?? {},
+            meta: rootFromAll?.meta ?? {},
+            playersEvents: pagedRawStats,
+          })
+          const mergedWithExplicitTeams = applyTeamsToData(mergedWithPagedStats, await teamsPayloadPromise)
+
+          if (compareCompleteness(normalizedFromAll, mergedWithExplicitTeams) > 0) {
+            normalizedFromAll = mergedWithExplicitTeams
+          }
+        }
+      } catch {
+        // Keep /all result if paged protocol is unavailable.
+      }
+
+      if (
+        normalizedFromAll.events.length > 0 ||
+        normalizedFromAll.players.length > 0 ||
+        normalizedFromAll.player_event_stats.length > 0 ||
+        normalizedFromAll.clans.length > 0
+      ) {
+        reportSyncProgress(options, {
+          stage: "done",
+          percent: 100,
+          message: "Синхронизация завершена",
+        })
+        return normalizedFromAll
+      }
+    } catch (error) {
+      allError = error
     }
-  } catch (error) {
-    allError = error
   }
+
+  reportSyncProgress(options, {
+    stage: "all",
+    percent: options.preferSplitEndpoints ? 18 : 35,
+    message: options.preferSplitEndpoints ? "Загружаем быстрые endpoint-ы..." : "Переходим на endpoint-ы fallback...",
+  })
 
   const [eventsResult, playersResult, pagedPlayerStatsResult, playerStatsResult, clansResult, dictionariesResult] =
     await Promise.allSettled([

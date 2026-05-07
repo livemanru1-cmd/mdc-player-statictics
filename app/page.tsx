@@ -1075,6 +1075,7 @@ export default function YearReviewPage() {
         forceRefresh,
         publish: true,
         skipPagedStats: !resetCache,
+        preferSplitEndpoints: !resetCache,
         onProgress: (progress) => {
           latestProgress = progress
           setSyncProgress((current) => ({
