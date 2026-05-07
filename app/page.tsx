@@ -1130,7 +1130,9 @@ export default function YearReviewPage() {
   }, [])
 
   useEffect(() => {
-    void loadData(true, false)
+    void loadData(false, false).then(() => {
+      void loadData(true, false)
+    })
   }, [loadData])
 
   useEffect(() => {
