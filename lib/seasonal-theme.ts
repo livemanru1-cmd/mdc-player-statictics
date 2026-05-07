@@ -505,10 +505,10 @@ const THEMES: Record<SeasonalThemeId, SeasonalThemeDefinition> = {
     id: "new-year",
     icon: "tree",
     seasonLabel: "Зима",
-    subtitle: "Новогодний и рождественский сезон",
+    subtitle: "Новый год",
     contextLabel: "Праздники по календарю РФ",
-    loadingLabel: "Загрузка статистики... собираем зимние данные",
-    summaryLabel: "MDC CLAN • ЗИМНИЙ СЕЗОН",
+    loadingLabel: "Загрузка статистики... Новый год",
+    summaryLabel: "MDC CLAN • НОВЫЙ ГОД",
     showSnowfall: true,
     backgrounds: buildMilitaryBackgrounds(NEW_YEAR_RECIPE),
     palette: {
@@ -527,10 +527,10 @@ const THEMES: Record<SeasonalThemeId, SeasonalThemeDefinition> = {
     id: "defender-day",
     icon: "shield",
     seasonLabel: "Зима",
-    subtitle: "Сводка ко Дню защитника Отечества",
+    subtitle: "День защитника Отечества",
     contextLabel: "23 февраля по календарю РФ",
-    loadingLabel: "Загрузка статистики... готовим сводку ко Дню защитника",
-    summaryLabel: "MDC CLAN • 23 ФЕВРАЛЯ",
+    loadingLabel: "Загрузка статистики... День защитника Отечества",
+    summaryLabel: "MDC CLAN • ДЕНЬ ЗАЩИТНИКА",
     showSnowfall: false,
     backgrounds: buildMilitaryBackgrounds(DEFENDER_RECIPE),
     palette: {
@@ -549,9 +549,9 @@ const THEMES: Record<SeasonalThemeId, SeasonalThemeDefinition> = {
     id: "womens-day",
     icon: "heart",
     seasonLabel: "Весна",
-    subtitle: "Сводка к Международному женскому дню",
+    subtitle: "Международный женский день",
     contextLabel: "8 марта по календарю РФ",
-    loadingLabel: "Загрузка статистики... готовим весенний выпуск",
+    loadingLabel: "Загрузка статистики... Международный женский день",
     summaryLabel: "MDC CLAN • 8 МАРТА",
     showSnowfall: false,
     backgrounds: buildMilitaryBackgrounds(WOMENS_DAY_RECIPE),
@@ -571,10 +571,10 @@ const THEMES: Record<SeasonalThemeId, SeasonalThemeDefinition> = {
     id: "labor-day",
     icon: "sparkles",
     seasonLabel: "Весна",
-    subtitle: "Весенний сезон",
+    subtitle: "Праздник Весны и Труда",
     contextLabel: "1 мая по календарю РФ",
-    loadingLabel: "Загрузка статистики... весенний сезон",
-    summaryLabel: "MDC CLAN • ВЕСЕННИЙ СЕЗОН",
+    loadingLabel: "Загрузка статистики... Праздник Весны и Труда",
+    summaryLabel: "MDC CLAN • ПРАЗДНИК ВЕСНЫ И ТРУДА",
     showSnowfall: false,
     backgrounds: buildMilitaryBackgrounds(LABOR_RECIPE),
     palette: {
@@ -593,10 +593,10 @@ const THEMES: Record<SeasonalThemeId, SeasonalThemeDefinition> = {
     id: "victory-day",
     icon: "trophy",
     seasonLabel: "Весна",
-    subtitle: "Майский сезон: ко Дню Победы",
+    subtitle: "День Победы",
     contextLabel: "9 мая по календарю РФ",
-    loadingLabel: "Загрузка статистики... обновляем майскую сводку",
-    summaryLabel: "MDC CLAN • КО ДНЮ ПОБЕДЫ",
+    loadingLabel: "Загрузка статистики... День Победы",
+    summaryLabel: "MDC CLAN • ДЕНЬ ПОБЕДЫ",
     showSnowfall: false,
     backgrounds: buildMilitaryBackgrounds(VICTORY_RECIPE),
     palette: {
@@ -615,9 +615,9 @@ const THEMES: Record<SeasonalThemeId, SeasonalThemeDefinition> = {
     id: "russia-day",
     icon: "flag",
     seasonLabel: "Лето",
-    subtitle: "Летний сезон: ко Дню России",
+    subtitle: "День России",
     contextLabel: "12 июня по календарю РФ",
-    loadingLabel: "Загрузка статистики... готовим летнюю сводку",
+    loadingLabel: "Загрузка статистики... День России",
     summaryLabel: "MDC CLAN • ДЕНЬ РОССИИ",
     showSnowfall: false,
     backgrounds: buildMilitaryBackgrounds(RUSSIA_RECIPE),
@@ -637,9 +637,9 @@ const THEMES: Record<SeasonalThemeId, SeasonalThemeDefinition> = {
     id: "unity-day",
     icon: "flag",
     seasonLabel: "Осень",
-    subtitle: "Осенний сезон: ко Дню народного единства",
+    subtitle: "День народного единства",
     contextLabel: "4 ноября по календарю РФ",
-    loadingLabel: "Загрузка статистики... готовим осенний обзор",
+    loadingLabel: "Загрузка статистики... День народного единства",
     summaryLabel: "MDC CLAN • ДЕНЬ ЕДИНСТВА",
     showSnowfall: false,
     backgrounds: buildMilitaryBackgrounds(UNITY_RECIPE),
@@ -747,10 +747,11 @@ const THEMES: Record<SeasonalThemeId, SeasonalThemeDefinition> = {
 
 export function getSeasonalTheme(now: Date = new Date()): SeasonalTheme {
   const { month, day } = getMoscowCalendarDate(now)
-  const toRuntimeTheme = (theme: SeasonalThemeDefinition): SeasonalTheme => {
+  const toRuntimeTheme = (theme: SeasonalThemeDefinition, overrides: Partial<Pick<SeasonalThemeDefinition, "subtitle" | "contextLabel" | "summaryLabel" | "loadingLabel">> = {}): SeasonalTheme => {
     const background = selectBackground(theme.id, now, theme.backgrounds)
+    const runtimeTheme = { ...theme, ...overrides }
     return {
-      ...theme,
+      ...runtimeTheme,
       backgroundImage: background.image,
       overlayGradient: background.overlayGradient,
       backgroundOpacity: background.opacity,
@@ -761,19 +762,27 @@ export function getSeasonalTheme(now: Date = new Date()): SeasonalTheme {
     }
   }
 
-  if ((month === 12 && day >= 20) || (month === 1 && day <= 14)) {
+  if (month === 1 && day === 1) {
     return toRuntimeTheme(THEMES["new-year"])
   }
 
-  if (month === 2 && day >= 20 && day <= 24) {
+  if (month === 1 && day === 7) {
+    return toRuntimeTheme(THEMES["new-year"], {
+      subtitle: "Рождество Христово",
+      contextLabel: "7 января по календарю РФ",
+      summaryLabel: "MDC CLAN • РОЖДЕСТВО",
+    })
+  }
+
+  if (month === 2 && day === 23) {
     return toRuntimeTheme(THEMES["defender-day"])
   }
 
-  if (month === 3 && day >= 6 && day <= 10) {
+  if (month === 3 && day === 8) {
     return toRuntimeTheme(THEMES["womens-day"])
   }
 
-  if (month === 5 && day >= 7 && day <= 10) {
+  if (month === 5 && day === 9) {
     return toRuntimeTheme(THEMES["victory-day"])
   }
 
@@ -781,11 +790,11 @@ export function getSeasonalTheme(now: Date = new Date()): SeasonalTheme {
     return toRuntimeTheme(THEMES["labor-day"])
   }
 
-  if (month === 6 && day >= 10 && day <= 13) {
+  if (month === 6 && day === 12) {
     return toRuntimeTheme(THEMES["russia-day"])
   }
 
-  if (month === 11 && day >= 2 && day <= 5) {
+  if (month === 11 && day === 4) {
     return toRuntimeTheme(THEMES["unity-day"])
   }
 
@@ -806,13 +815,13 @@ export function getSeasonalTheme(now: Date = new Date()): SeasonalTheme {
 
 export function getRussianCalendarThemeCatalog(): Array<{ id: SeasonalThemeId; subtitle: string; contextLabel: string }> {
   return [
-    { id: "new-year", subtitle: THEMES["new-year"].subtitle, contextLabel: "20 декабря - 14 января" },
-    { id: "defender-day", subtitle: THEMES["defender-day"].subtitle, contextLabel: "20 - 24 февраля" },
-    { id: "womens-day", subtitle: THEMES["womens-day"].subtitle, contextLabel: "6 - 10 марта" },
+    { id: "new-year", subtitle: THEMES["new-year"].subtitle, contextLabel: "1 января" },
+    { id: "defender-day", subtitle: THEMES["defender-day"].subtitle, contextLabel: "23 февраля" },
+    { id: "womens-day", subtitle: THEMES["womens-day"].subtitle, contextLabel: "8 марта" },
     { id: "labor-day", subtitle: THEMES["labor-day"].subtitle, contextLabel: "1 мая" },
-    { id: "victory-day", subtitle: THEMES["victory-day"].subtitle, contextLabel: "7 - 10 мая" },
-    { id: "russia-day", subtitle: THEMES["russia-day"].subtitle, contextLabel: "10 - 13 июня" },
-    { id: "unity-day", subtitle: THEMES["unity-day"].subtitle, contextLabel: "2 - 5 ноября" },
+    { id: "victory-day", subtitle: THEMES["victory-day"].subtitle, contextLabel: "9 мая" },
+    { id: "russia-day", subtitle: THEMES["russia-day"].subtitle, contextLabel: "12 июня" },
+    { id: "unity-day", subtitle: THEMES["unity-day"].subtitle, contextLabel: "4 ноября" },
     { id: "winter", subtitle: THEMES.winter.subtitle, contextLabel: "декабрь - февраль" },
     { id: "spring", subtitle: THEMES.spring.subtitle, contextLabel: "март - май" },
     { id: "summer", subtitle: THEMES.summer.subtitle, contextLabel: "июнь - август" },
