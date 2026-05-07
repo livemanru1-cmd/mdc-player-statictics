@@ -76,6 +76,7 @@ import {
   Sparkles,
   Star,
   RotateCcw,
+  Trash2,
 } from "lucide-react"
 
 const API_CACHE_NAMESPACE = "mdc-api-cache"
@@ -1136,6 +1137,18 @@ export default function YearReviewPage() {
         void loadData(true, false)
       }
     })
+  }, [loadData])
+
+  const handleHardCacheReset = useCallback(() => {
+    setRawData(null)
+    rawDataRef.current = null
+    setLoading(true)
+    setLoadError(null)
+    setLastUpdatedAt(null)
+    setDisplayedSyncPercent(5)
+    setLoadingShowcaseIndex(0)
+    setLoadingShowcaseVisible(true)
+    void loadData(true, true)
   }, [loadData])
 
   useEffect(() => {
@@ -2529,6 +2542,16 @@ export default function YearReviewPage() {
                 >
                   <RotateCcw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
                   {isRefreshing ? "Синхронизируем..." : "Обновить"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-christmas-red/35 bg-background/50 text-christmas-snow hover:border-christmas-red/55 hover:bg-christmas-red/10 hover:text-christmas-red"
+                  onClick={handleHardCacheReset}
+                  disabled={isRefreshing}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Сброс кеша
                 </Button>
               </div>
             </CardContent>
