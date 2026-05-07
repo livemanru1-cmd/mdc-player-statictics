@@ -116,45 +116,45 @@ export function getSquadToneClasses(label: string | null | undefined): {
   switch (getSquadToneKey(label)) {
     case "red":
       return {
-        badge: "border-rose-500/40 bg-rose-500/10 text-rose-200",
-        panel: "border-rose-500/20 bg-rose-500/10",
-        dot: "bg-rose-400",
+        badge: "border-red-500/35 bg-red-500/10 text-red-200",
+        panel: "border-red-500/35 bg-red-500/6",
+        dot: "bg-red-500",
       }
     case "blue":
       return {
-        badge: "border-sky-500/40 bg-sky-500/10 text-sky-200",
-        panel: "border-sky-500/20 bg-sky-500/10",
-        dot: "bg-sky-400",
+        badge: "border-cyan-500/35 bg-cyan-500/10 text-cyan-200",
+        panel: "border-cyan-500/35 bg-cyan-500/6",
+        dot: "bg-cyan-500",
       }
     case "green":
       return {
-        badge: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
-        panel: "border-emerald-500/20 bg-emerald-500/10",
-        dot: "bg-emerald-400",
+        badge: "border-emerald-500/35 bg-emerald-500/10 text-emerald-200",
+        panel: "border-emerald-500/35 bg-emerald-500/6",
+        dot: "bg-emerald-500",
       }
     case "yellow":
       return {
-        badge: "border-amber-500/40 bg-amber-500/10 text-amber-200",
-        panel: "border-amber-500/20 bg-amber-500/10",
-        dot: "bg-amber-400",
+        badge: "border-yellow-500/35 bg-yellow-500/10 text-yellow-200",
+        panel: "border-yellow-500/35 bg-yellow-500/6",
+        dot: "bg-yellow-500",
       }
     case "orange":
       return {
-        badge: "border-orange-500/40 bg-orange-500/10 text-orange-200",
-        panel: "border-orange-500/20 bg-orange-500/10",
-        dot: "bg-orange-400",
+        badge: "border-orange-500/35 bg-orange-500/10 text-orange-200",
+        panel: "border-orange-500/35 bg-orange-500/6",
+        dot: "bg-orange-500",
       }
     case "purple":
       return {
-        badge: "border-violet-500/40 bg-violet-500/10 text-violet-200",
-        panel: "border-violet-500/20 bg-violet-500/10",
-        dot: "bg-violet-400",
+        badge: "border-violet-500/35 bg-violet-500/10 text-violet-200",
+        panel: "border-violet-500/35 bg-violet-500/6",
+        dot: "bg-violet-500",
       }
     case "pink":
       return {
-        badge: "border-pink-500/40 bg-pink-500/10 text-pink-200",
-        panel: "border-pink-500/20 bg-pink-500/10",
-        dot: "bg-pink-400",
+        badge: "border-pink-500/35 bg-pink-500/10 text-pink-200",
+        panel: "border-pink-500/35 bg-pink-500/6",
+        dot: "bg-pink-500",
       }
     case "cyan":
       return {
@@ -164,21 +164,21 @@ export function getSquadToneClasses(label: string | null | undefined): {
       }
     case "brown":
       return {
-        badge: "border-amber-700/40 bg-amber-900/20 text-amber-100",
-        panel: "border-amber-700/20 bg-amber-900/15",
-        dot: "bg-amber-600",
+        badge: "border-amber-700/35 bg-amber-700/10 text-amber-200",
+        panel: "border-amber-700/35 bg-amber-700/6",
+        dot: "bg-amber-700",
       }
     case "black":
       return {
-        badge: "border-neutral-500/50 bg-neutral-950/70 text-neutral-100",
-        panel: "border-neutral-600/35 bg-neutral-950/55",
-        dot: "bg-neutral-950 ring-1 ring-neutral-400/80",
+        badge: "border-neutral-500/45 bg-neutral-700/18 text-neutral-100",
+        panel: "border-neutral-500/45 bg-neutral-700/18",
+        dot: "bg-neutral-500 ring-1 ring-neutral-300/80",
       }
     case "white":
       return {
-        badge: "border-white/70 bg-white/18 text-white",
-        panel: "border-white/45 bg-white/12",
-        dot: "bg-white ring-1 ring-slate-500/80",
+        badge: "border-slate-100/52 bg-slate-100/16 text-slate-50",
+        panel: "border-slate-100/52 bg-slate-100/16",
+        dot: "bg-slate-100 ring-1 ring-slate-500/80",
       }
     default:
       return {
