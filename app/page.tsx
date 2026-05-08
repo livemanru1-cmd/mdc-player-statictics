@@ -138,6 +138,7 @@ function readCachedData(): CachedPayload | null {
     if (!Array.isArray(parsed.data.players)) return null
     if (!Array.isArray(parsed.data.player_event_stats)) return null
     if (!Array.isArray(parsed.data.clans)) return null
+    if (parsed.data.events.length > 0 && parsed.data.player_event_stats.length === 0) return null
     return parsed
   } catch {
     return null
@@ -1103,7 +1104,7 @@ export default function YearReviewPage() {
         forceRefresh,
         publish: true,
         skipPagedStats: false,
-        preferSplitEndpoints: !resetCache,
+        preferSplitEndpoints: Boolean(cached) && !resetCache,
         onProgress: (progress) => {
           latestProgress = progress
           setSyncProgress((current) => ({
