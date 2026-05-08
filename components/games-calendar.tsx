@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FactionMatchup } from "@/components/faction-icon"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { getMetricIcon } from "@/lib/app-icons"
+import { withBasePath } from "@/lib/base-path"
 import { getEventSizeLabel, type PastGameSummary } from "@/lib/data-utils"
 import { cn } from "@/lib/utils"
 import {
@@ -142,10 +143,10 @@ const HOLIDAYS_BY_MONTH_DAY: Record<string, HolidayInfo> = {
   "12-25": { label: "Католическое Рождество", nonWorking: true },
   "12-27": { label: "День спасателя", nonWorking: false },
 }
-const HOLIDAY_FILTERS: Array<{ value: HolidayFilter; label: string }> = [
+const HOLIDAY_FILTERS: Array<{ value: HolidayFilter; label: string; icon?: string }> = [
   { value: "all", label: "Все" },
-  { value: "ru", label: "РФ" },
-  { value: "by", label: "РБ" },
+  { value: "ru", label: "РФ", icon: withBasePath("/holiday-icons/russia.png") },
+  { value: "by", label: "РБ", icon: withBasePath("/holiday-icons/belarus.png") },
 ]
 const BELARUS_HOLIDAY_KEYS = new Set(["03-15", "04-02", "04-26", "07-03", "09-17", "10-14", "11-07", "12-25"])
 const COMMON_HOLIDAY_KEYS = new Set(["01-01", "01-02", "01-07", "03-08", "05-01", "05-09"])
@@ -889,14 +890,21 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
                     key={filter.value}
                     type="button"
                     onClick={() => setHolidayFilter(filter.value)}
+                    aria-label={filter.label}
+                    title={filter.label}
                     className={cn(
-                      "rounded px-3 py-1.5 text-xs font-semibold transition-colors",
+                      "inline-flex h-8 min-w-8 items-center justify-center rounded px-3 py-1.5 text-xs font-semibold transition-colors",
+                      filter.icon && "px-1.5",
                       holidayFilter === filter.value
                         ? "bg-christmas-gold text-slate-950"
                         : "text-christmas-gold hover:bg-christmas-gold/10 hover:text-christmas-gold",
                     )}
                   >
-                    {filter.label}
+                    {filter.icon ? (
+                      <img src={filter.icon} alt="" aria-hidden="true" className="h-6 w-6 rounded-full object-cover" />
+                    ) : (
+                      filter.label
+                    )}
                   </button>
                 ))}
               </div>
