@@ -238,6 +238,30 @@ function normalizeTickerText(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase()
 }
 
+function cleanTickerValue(value: string | null | undefined): string {
+  const normalized = (value ?? "").trim()
+  if (!normalized) return ""
+
+  const lower = normalized.toLowerCase()
+  if (["vs", "v", "null", "undefined", "-", "—", "?"].includes(lower)) {
+    return ""
+  }
+
+  return normalized
+}
+
+function isMeaningfulTickerMatchup(value: string): boolean {
+  const cleaned = cleanTickerValue(value)
+  if (!cleaned) return false
+
+  if (/\bvs\b/i.test(cleaned)) {
+    const sides = cleaned.split(/\s+vs\s+/i).map(cleanTickerValue).filter(Boolean)
+    return sides.length >= 2
+  }
+
+  return true
+}
+
 function minuteKey(value: string): string {
   const parsed = parseEventDate(value)
   if (!parsed) return value || "unknown"
@@ -297,24 +321,25 @@ function groupTickerEvents(events: PastGameSummary[]): TickerEventGroup[] {
 function formatTickerEvent(group: TickerEventGroup): string {
   const { primary, isSideSwap } = group
   return [
-    (primary.event_type || "EVENT").toUpperCase(),
+    (cleanTickerValue(primary.event_type) || "EVENT").toUpperCase(),
     formatTickerDate(primary.started_at),
-    !isLectureEvent(primary.event_type) ? primary.map : null,
-    !isLectureEvent(primary.event_type) ? primary.mode : null,
-    primary.opponent,
+    !isLectureEvent(primary.event_type) ? cleanTickerValue(primary.map) : null,
+    !isLectureEvent(primary.event_type) ? cleanTickerValue(primary.mode) : null,
+    cleanTickerValue(primary.opponent),
     isSideSwap ? "смена сторон" : null,
   ].filter(Boolean).join(" | ")
 }
 
 function getExplicitTickerMatchup(group: TickerEventGroup): string {
   const primary = group.primary
-  const explicit = (primary.faction_matchup ?? "").trim()
-  if (explicit) return explicit
+  const explicit = cleanTickerValue(primary.faction_matchup)
+  if (explicit && isMeaningfulTickerMatchup(explicit)) return explicit
 
-  return [primary.faction_1, primary.faction_2]
-    .map((value) => (value ?? "").trim())
+  const fallback = [primary.faction_1, primary.faction_2]
+    .map(cleanTickerValue)
     .filter(Boolean)
     .join(" vs ")
+  return isMeaningfulTickerMatchup(fallback) ? fallback : ""
 }
 
 function getTickerMatchup(group: TickerEventGroup): string {

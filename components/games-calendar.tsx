@@ -426,18 +426,39 @@ function selectedGameTone(game: PastGameSummary): string {
   return "border-border/70 bg-[#090a12]"
 }
 
-function explicitMatchupLabel(game: PastGameSummary): string {
-  const explicit = (game.faction_matchup ?? "").trim()
-  if (explicit) return explicit
+function cleanCalendarValue(value: string | null | undefined): string {
+  const normalized = (value ?? "").trim()
+  if (!normalized) return ""
 
-  return [game.faction_1, game.faction_2]
-    .map((value) => (value ?? "").trim())
-    .filter(Boolean)
-    .join(" vs ")
+  const lower = normalized.toLowerCase()
+  if (["vs", "v", "null", "undefined", "-", "—", "?"].includes(lower)) {
+    return ""
+  }
+
+  return normalized
 }
 
-function matchupLabel(game: PastGameSummary): string {
-  return explicitMatchupLabel(game) || game.event_id
+function isMeaningfulMatchup(value: string): boolean {
+  const cleaned = cleanCalendarValue(value)
+  if (!cleaned) return false
+
+  if (/\bvs\b/i.test(cleaned)) {
+    const sides = cleaned.split(/\s+vs\s+/i).map(cleanCalendarValue).filter(Boolean)
+    return sides.length >= 2
+  }
+
+  return true
+}
+
+function explicitMatchupLabel(game: PastGameSummary): string {
+  const explicit = cleanCalendarValue(game.faction_matchup)
+  if (explicit && isMeaningfulMatchup(explicit)) return explicit
+
+  const fallback = [game.faction_1, game.faction_2]
+    .map(cleanCalendarValue)
+    .filter(Boolean)
+    .join(" vs ")
+  return isMeaningfulMatchup(fallback) ? fallback : ""
 }
 
 function ticketText(game: PastGameSummary): string {
@@ -487,8 +508,8 @@ function compactInfoItems(item: CalendarGame): Array<{ key: string; icon: Lucide
     game.event_type ? { key: "type", icon: eventIcon, value: game.event_type } : null,
     game.started_at ? { key: "time", icon: CalendarDays, value: formatTime(game.started_at) } : null,
     !isLecture && getEventSizeLabel(game) ? { key: "format", icon: Users, value: getEventSizeLabel(game) } : null,
-    !isLecture && game.map ? { key: "map", icon: MapPin, value: game.map } : null,
-    !isLecture && game.mode ? { key: "mode", icon: Gamepad2, value: game.mode } : null,
+    !isLecture && cleanCalendarValue(game.map) ? { key: "map", icon: MapPin, value: cleanCalendarValue(game.map) } : null,
+    !isLecture && cleanCalendarValue(game.mode) ? { key: "mode", icon: Gamepad2, value: cleanCalendarValue(game.mode) } : null,
     !isLecture && matchup ? { key: "factions", icon: Flag, value: matchup } : null,
     !isLecture && ticketValue !== null ? { key: "tickets", icon: ArrowLeftRight, value: `${ticketValue > 0 ? "+" : ""}${ticketValue}` } : null,
   ]
@@ -591,10 +612,10 @@ function CalendarGameTooltip({ item }: { item: CalendarGame }) {
           <span>Участников: <span className="text-christmas-snow">{roster.total}</span></span>
         ) : (
           <>
-            {selectedGame.map ? <span>Карта: <span className="text-christmas-snow">{selectedGame.map}</span></span> : null}
+            {cleanCalendarValue(selectedGame.map) ? <span>Карта: <span className="text-christmas-snow">{cleanCalendarValue(selectedGame.map)}</span></span> : null}
             {getEventSizeLabel(selectedGame) ? <span>Формат: <span className="text-christmas-snow">{getEventSizeLabel(selectedGame)}</span></span> : null}
-            {selectedGame.mode ? <span>Режим: <span className="text-christmas-snow">{selectedGame.mode}</span></span> : null}
-            {selectedGame.opponent ? <span>Оппонент: <span className="text-christmas-snow">{selectedGame.opponent}</span></span> : null}
+            {cleanCalendarValue(selectedGame.mode) ? <span>Режим: <span className="text-christmas-snow">{cleanCalendarValue(selectedGame.mode)}</span></span> : null}
+            {cleanCalendarValue(selectedGame.opponent) ? <span>Оппонент: <span className="text-christmas-snow">{cleanCalendarValue(selectedGame.opponent)}</span></span> : null}
             {selectedGame.opponent_strength ? <span>Сила соперника: <span className="text-christmas-snow">{selectedGame.opponent_strength}</span></span> : null}
             {matchup ? <span className="inline-flex items-center justify-center gap-1.5">
               Фракции:
@@ -1007,13 +1028,13 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
                                   </div>
                                   {!isLectureEvent(item.primary.event_type) ? (
                                     <>
-                                      {item.primary.map ? <div className="flex min-w-0 items-center justify-center gap-1.5">
+                                      {cleanCalendarValue(item.primary.map) ? <div className="flex min-w-0 items-center justify-center gap-1.5">
                                         <MapPin className="h-3 w-3 shrink-0" />
-                                        <span className="truncate">{item.primary.map}</span>
+                                        <span className="truncate">{cleanCalendarValue(item.primary.map)}</span>
                                       </div> : null}
-                                      {item.primary.mode ? <div className="flex min-w-0 items-center justify-center gap-1.5">
+                                      {cleanCalendarValue(item.primary.mode) ? <div className="flex min-w-0 items-center justify-center gap-1.5">
                                         <Gamepad2 className="h-3 w-3 shrink-0" />
-                                        <span className="truncate">{item.primary.mode}</span>
+                                        <span className="truncate">{cleanCalendarValue(item.primary.mode)}</span>
                                       </div> : null}
                                       {explicitMatchupLabel(item.primary) ? <div className="flex min-w-0 items-center justify-center gap-1.5">
                                         <FactionMatchup value={explicitMatchupLabel(item.primary)} className="justify-center" />
