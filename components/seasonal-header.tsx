@@ -565,7 +565,7 @@ export function SeasonalHeader({ mdcPlayersCount, gravePlayersCount, nklvPlayers
       },
         {
           id: "dcia",
-          title: "De Caelo Ad Infernos",
+          title: "De Caelo Ad Inferos",
           subtitle: theme.subtitle,
           tagline: null,
           emblemSrc: withBasePath("/dcia-emblem.png"),

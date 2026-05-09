@@ -1578,7 +1578,7 @@ export default function YearReviewPage() {
       },
       {
         id: "coalition",
-        title: "De Caelo Ad Infernos",
+        title: "De Caelo Ad Inferos",
         emblemSrc: withBasePath("/dcia-emblem.png"),
         emblemAlt: "DCAI emblem",
         offsetClassName: "",
