@@ -426,8 +426,18 @@ function selectedGameTone(game: PastGameSummary): string {
   return "border-border/70 bg-[#090a12]"
 }
 
+function explicitMatchupLabel(game: PastGameSummary): string {
+  const explicit = (game.faction_matchup ?? "").trim()
+  if (explicit) return explicit
+
+  return [game.faction_1, game.faction_2]
+    .map((value) => (value ?? "").trim())
+    .filter(Boolean)
+    .join(" vs ")
+}
+
 function matchupLabel(game: PastGameSummary): string {
-  return game.faction_matchup || [game.faction_1, game.faction_2].filter(Boolean).join(" vs ") || game.event_id
+  return explicitMatchupLabel(game) || game.event_id
 }
 
 function ticketText(game: PastGameSummary): string {
@@ -470,7 +480,7 @@ function compactInfoItems(item: CalendarGame): Array<{ key: string; icon: Lucide
   const game = item.primary
   const isLecture = isLectureEvent(game.event_type)
   const eventIcon = getEventTypeIcon(game.event_type)
-  const matchup = game.faction_matchup || [game.faction_1, game.faction_2].filter(Boolean).join(" vs ")
+  const matchup = explicitMatchupLabel(game)
   const ticketValue = item.isSideSwap ? aggregateTicketDiff(item.games) : gameTicketDiff(game)
 
   const items = [
@@ -522,7 +532,7 @@ function CalendarGameTooltip({ item }: { item: CalendarGame }) {
   const [manualSelection, setManualSelection] = useState(false)
   const selectedGame = games[Math.min(selectedGameIndex, games.length - 1)] ?? primary
   const roster = getRosterCounts(selectedGame)
-  const matchup = selectedGame.faction_matchup || [selectedGame.faction_1, selectedGame.faction_2].filter(Boolean).join(" vs ")
+  const matchup = explicitMatchupLabel(selectedGame)
   const planned = isPlannedGame(primary)
   const isLecture = isLectureEvent(selectedGame.event_type)
   const aggregateDiff = aggregateTicketDiff(games)
@@ -567,7 +577,11 @@ function CalendarGameTooltip({ item }: { item: CalendarGame }) {
                   : "border-border/60 bg-background/35 text-muted-foreground hover:border-christmas-gold/40 hover:text-christmas-snow",
               )}
             >
-              <FactionMatchup value={matchupLabel(game)} className="justify-center" disableTooltip />
+              {explicitMatchupLabel(game) ? (
+                <FactionMatchup value={explicitMatchupLabel(game)} className="justify-center" disableTooltip />
+              ) : (
+                <span>{index + 1}</span>
+              )}
             </button>
           ))}
         </div>
@@ -577,15 +591,15 @@ function CalendarGameTooltip({ item }: { item: CalendarGame }) {
           <span>Участников: <span className="text-christmas-snow">{roster.total}</span></span>
         ) : (
           <>
-            <span>Карта: <span className="text-christmas-snow">{selectedGame.map || "Не указана"}</span></span>
-            <span>Формат: <span className="text-christmas-snow">{getEventSizeLabel(selectedGame) || "Не указан"}</span></span>
-            <span>Режим: <span className="text-christmas-snow">{selectedGame.mode || "Не указан"}</span></span>
-            <span>Оппонент: <span className="text-christmas-snow">{selectedGame.opponent || "Не указан"}</span></span>
+            {selectedGame.map ? <span>Карта: <span className="text-christmas-snow">{selectedGame.map}</span></span> : null}
+            {getEventSizeLabel(selectedGame) ? <span>Формат: <span className="text-christmas-snow">{getEventSizeLabel(selectedGame)}</span></span> : null}
+            {selectedGame.mode ? <span>Режим: <span className="text-christmas-snow">{selectedGame.mode}</span></span> : null}
+            {selectedGame.opponent ? <span>Оппонент: <span className="text-christmas-snow">{selectedGame.opponent}</span></span> : null}
             {selectedGame.opponent_strength ? <span>Сила соперника: <span className="text-christmas-snow">{selectedGame.opponent_strength}</span></span> : null}
-            <span className="inline-flex items-center justify-center gap-1.5">
+            {matchup ? <span className="inline-flex items-center justify-center gap-1.5">
               Фракции:
-              {matchup ? <FactionMatchup value={matchup} className="text-christmas-snow" showLabels /> : <span className="text-christmas-snow">Не указаны</span>}
-            </span>
+              <FactionMatchup value={matchup} className="text-christmas-snow" showLabels />
+            </span> : null}
             {!planned ? <span>Результат: <span className="text-christmas-snow">{resultLabel(selectedGame)}</span></span> : null}
             {isSideSwap && aggregateDiff !== null ? <span>Общая разница тикетов: <span className="text-christmas-snow">{aggregateDiff > 0 ? "+" : ""}{aggregateDiff}</span></span> : null}
           </>
@@ -993,21 +1007,17 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
                                   </div>
                                   {!isLectureEvent(item.primary.event_type) ? (
                                     <>
-                                      <div className="flex min-w-0 items-center justify-center gap-1.5">
+                                      {item.primary.map ? <div className="flex min-w-0 items-center justify-center gap-1.5">
                                         <MapPin className="h-3 w-3 shrink-0" />
                                         <span className="truncate">{item.primary.map}</span>
-                                      </div>
-                                      <div className="flex min-w-0 items-center justify-center gap-1.5">
-                                        {item.primary.mode ? (
-                                          <>
-                                            <Gamepad2 className="h-3 w-3 shrink-0" />
-                                            <span className="truncate">{item.primary.mode}</span>
-                                          </>
-                                        ) : null}
-                                      </div>
-                                      <div className="flex min-w-0 items-center justify-center gap-1.5">
-                                        <FactionMatchup value={matchupLabel(item.primary)} className="justify-center" />
-                                      </div>
+                                      </div> : null}
+                                      {item.primary.mode ? <div className="flex min-w-0 items-center justify-center gap-1.5">
+                                        <Gamepad2 className="h-3 w-3 shrink-0" />
+                                        <span className="truncate">{item.primary.mode}</span>
+                                      </div> : null}
+                                      {explicitMatchupLabel(item.primary) ? <div className="flex min-w-0 items-center justify-center gap-1.5">
+                                        <FactionMatchup value={explicitMatchupLabel(item.primary)} className="justify-center" />
+                                      </div> : null}
                                     </>
                                   ) : null}
                                   {!isLectureEvent(item.primary.event_type) && !isPlannedGame(item.primary) && aggregateTicketDiff(item.games) !== null ? (

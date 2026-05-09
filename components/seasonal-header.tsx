@@ -300,14 +300,25 @@ function formatTickerEvent(group: TickerEventGroup): string {
     (primary.event_type || "EVENT").toUpperCase(),
     formatTickerDate(primary.started_at),
     !isLectureEvent(primary.event_type) ? primary.map : null,
+    !isLectureEvent(primary.event_type) ? primary.mode : null,
     primary.opponent,
     isSideSwap ? "смена сторон" : null,
   ].filter(Boolean).join(" | ")
 }
 
-function getTickerMatchup(group: TickerEventGroup): string {
+function getExplicitTickerMatchup(group: TickerEventGroup): string {
   const primary = group.primary
-  return primary.faction_matchup || [primary.faction_1, primary.faction_2].filter(Boolean).join(" vs ")
+  const explicit = (primary.faction_matchup ?? "").trim()
+  if (explicit) return explicit
+
+  return [primary.faction_1, primary.faction_2]
+    .map((value) => (value ?? "").trim())
+    .filter(Boolean)
+    .join(" vs ")
+}
+
+function getTickerMatchup(group: TickerEventGroup): string {
+  return getExplicitTickerMatchup(group)
 }
 
 export function SeasonalHeader({ mdcPlayersCount, gravePlayersCount, nklvPlayersCount, theme, futureEvents = [], onOpenCalendarEvent }: SeasonalHeaderProps) {
