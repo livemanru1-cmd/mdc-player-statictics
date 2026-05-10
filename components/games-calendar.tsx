@@ -65,6 +65,7 @@ type HolidayInfo = { label: string; nonWorking: boolean; countries?: HolidayCoun
 const WEEK_DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 const WEEKDAY_GUIDE_OFFSET = 0
 const WEEKDAY_GUIDE_MOUSE_LOCK_MS = 650
+const WEEKDAY_GUIDE_STICKY_TOP = 76
 const LINEUP_API_BASE = (process.env.NEXT_PUBLIC_MDC_API_BASE ?? "https://api.hungryfishteam.org/gas/mdc").replace(/\/$/, "")
 const LINEUP_API_URL = `${LINEUP_API_BASE}/lineup?publish=true`
 const MONTH_NAMES = [
@@ -704,7 +705,9 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
   const [holidayFilter, setHolidayFilter] = useState<HolidayFilter>("all")
   const [lineupAvailability, setLineupAvailability] = useState<LineupAvailability | null>(null)
   const [weekdayGuidePinned, setWeekdayGuidePinned] = useState(false)
+  const [weekdayGuideStuck, setWeekdayGuideStuck] = useState(false)
   const [weekdayGuide, setWeekdayGuide] = useState({ weekIndex: 0, top: 0 })
+  const calendarGridRef = useRef<HTMLDivElement | null>(null)
   const weekRefs = useRef<Array<HTMLDivElement | null>>([])
   const weekdayGuideRef = useRef(weekdayGuide)
   const scrollFrameRef = useRef<number | null>(null)
@@ -854,10 +857,35 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
 
   useEffect(() => {
     if (!weekdayGuidePinned) {
+      setWeekdayGuideStuck(false)
       const frameId = window.requestAnimationFrame(() => moveWeekdayGuideToWeek(weekdayGuideRef.current.weekIndex))
       return () => window.cancelAnimationFrame(frameId)
     }
   }, [moveWeekdayGuideToWeek, weekdayGuidePinned])
+
+  useEffect(() => {
+    if (!weekdayGuidePinned) return
+    let frameId: number | null = null
+
+    const updateStuckState = () => {
+      if (frameId !== null) return
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null
+        const rect = calendarGridRef.current?.getBoundingClientRect()
+        setWeekdayGuideStuck(Boolean(rect && rect.top <= WEEKDAY_GUIDE_STICKY_TOP))
+      })
+    }
+
+    updateStuckState()
+    window.addEventListener("scroll", updateStuckState, { passive: true })
+    window.addEventListener("resize", updateStuckState)
+
+    return () => {
+      window.removeEventListener("scroll", updateStuckState)
+      window.removeEventListener("resize", updateStuckState)
+      if (frameId !== null) window.cancelAnimationFrame(frameId)
+    }
+  }, [weekdayGuidePinned])
 
   useEffect(() => {
     return () => {
@@ -1014,6 +1042,7 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
       <CardContent className="space-y-3">
         <div className="overflow-x-auto pb-1">
           <div
+            ref={calendarGridRef}
             className={cn("relative min-w-[920px]", weekdayGuidePinned ? "pt-0" : "pt-8")}
             onMouseMove={handleCalendarMouseMove}
           >
@@ -1021,10 +1050,14 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
               className={cn(
                 "left-0 right-0 z-20 rounded-md border border-christmas-gold/20 bg-card/95 text-center text-sm font-bold uppercase tracking-wider text-christmas-gold shadow-lg shadow-black/20 backdrop-blur",
                 weekdayGuidePinned
-                  ? "sticky top-[76px] mb-3"
+                  ? "sticky mb-3 translate-y-0"
                   : "pointer-events-none absolute top-0 transition-transform duration-200 ease-out",
               )}
-              style={weekdayGuidePinned ? undefined : { transform: `translateY(${weekdayGuide.top}px)` }}
+              style={
+                weekdayGuidePinned
+                  ? { top: WEEKDAY_GUIDE_STICKY_TOP }
+                  : { transform: `translateY(${weekdayGuide.top}px)` }
+              }
             >
               <div className="grid grid-cols-7 gap-2">
                 {WEEK_DAYS.map((day) => <div key={day} className="py-1.5">{day}</div>)}
@@ -1045,7 +1078,7 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
                 <Pin className={cn("h-3.5 w-3.5", weekdayGuidePinned && "fill-current")} />
               </button>
             </div>
-            <div className="space-y-3">
+            <div className={cn("space-y-3", weekdayGuidePinned && weekdayGuideStuck && "pt-[76px]")}>
               {calendarWeeks.map((week, weekIndex) => (
                 <div
                   key={`week-${weekIndex}`}
