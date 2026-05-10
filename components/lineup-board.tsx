@@ -626,6 +626,15 @@ export function LineupBoard({ games = [], players = [], onOpenPlayer }: LineupBo
   const opponent = calendarGame?.opponent?.trim() ?? ""
   const visibleSquads = SQUAD_ORDER.filter((squadName) => hasSquadContent(currentSide[squadName] ?? []))
   const hasAnyFilledSquad = SQUAD_ORDER.some((squadName) => hasSquadContent(currentSide[squadName] ?? []))
+  const hasAnyLineupContent = useMemo(
+    () =>
+      lineup
+        ? (["siteOne", "siteTwo"] as const).some((sideKey) =>
+            SQUAD_ORDER.some((squadName) => hasSquadContent(lineup[sideKey]?.[squadName] ?? [])),
+          )
+        : false,
+    [lineup],
+  )
   const isInitialLoading = loading && !lineup
 
   return (
@@ -638,6 +647,24 @@ export function LineupBoard({ games = [], players = [], onOpenPlayer }: LineupBo
               <Progress value={loadProgress} className="h-2 bg-muted/30 [&_[data-slot=progress-indicator]]:duration-500 [&_[data-slot=progress-indicator]]:ease-out" />
             </div>
             <p className="mt-3 text-xs text-muted-foreground">Получаем ближайшую игру и составы отрядов.</p>
+          </div>
+        ) : !hasAnyLineupContent ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+            {loading ? (
+              <div className="min-w-0 flex-1 px-1 py-1.5">
+                <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-christmas-gold">
+                  <span>Обновление лайнапа</span>
+                  <span>{Math.round(loadProgress)}%</span>
+                </div>
+                <div className="w-full" style={{ "--primary": "var(--christmas-gold)" } as CSSProperties}>
+                  <Progress value={loadProgress} className="h-1.5 bg-muted/30 [&_[data-slot=progress-indicator]]:duration-500 [&_[data-slot=progress-indicator]]:ease-out" />
+                </div>
+              </div>
+            ) : null}
+            <Button type="button" variant="outline" className="h-10 shrink-0 !border !border-christmas-gold/30 bg-background/40 px-3 text-christmas-gold hover:!border-christmas-gold/60 hover:bg-christmas-gold/10 hover:text-christmas-gold" onClick={() => void loadLineup()} disabled={loading}>
+              <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
+              Обновить
+            </Button>
           </div>
         ) : (
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
