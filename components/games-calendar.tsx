@@ -1021,7 +1021,7 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
               className={cn(
                 "left-0 right-0 z-20 rounded-md border border-christmas-gold/20 bg-card/95 text-center text-sm font-bold uppercase tracking-wider text-christmas-gold shadow-lg shadow-black/20 backdrop-blur",
                 weekdayGuidePinned
-                  ? "sticky top-2 mb-3"
+                  ? "sticky top-32 mb-3"
                   : "pointer-events-none absolute top-0 transition-transform duration-200 ease-out",
               )}
               style={weekdayGuidePinned ? undefined : { transform: `translateY(${weekdayGuide.top}px)` }}
@@ -1036,10 +1036,10 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
                 aria-label={weekdayGuidePinned ? "Открепить дни недели" : "Закрепить дни недели сверху"}
                 aria-pressed={weekdayGuidePinned}
                 className={cn(
-                  "pointer-events-auto absolute right-1 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded border text-christmas-gold transition-colors",
+                  "pointer-events-auto absolute right-1 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-christmas-gold transition-colors",
                   weekdayGuidePinned
-                    ? "border-christmas-gold/60 bg-christmas-gold/15"
-                    : "border-christmas-gold/25 bg-background/75 hover:border-christmas-gold/60 hover:bg-christmas-gold/10",
+                    ? "bg-christmas-gold/15"
+                    : "bg-transparent hover:bg-christmas-gold/10",
                 )}
               >
                 <Pin className={cn("h-3.5 w-3.5", weekdayGuidePinned && "fill-current")} />
