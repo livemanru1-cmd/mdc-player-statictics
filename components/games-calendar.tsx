@@ -1026,7 +1026,7 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
               )}
               style={weekdayGuidePinned ? undefined : { transform: `translateY(${weekdayGuide.top}px)` }}
             >
-              <div className="grid grid-cols-7 gap-1 pr-9">
+              <div className="grid grid-cols-7 gap-2">
                 {WEEK_DAYS.map((day) => <div key={day} className="py-1.5">{day}</div>)}
               </div>
               <button
