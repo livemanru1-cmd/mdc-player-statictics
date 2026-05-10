@@ -18,6 +18,7 @@ import {
   Flag,
   Gamepad2,
   MapPin,
+  Pin,
   Shield,
   Swords,
   Trophy,
@@ -62,9 +63,10 @@ type HolidayCountry = Exclude<HolidayFilter, "all">
 type HolidayInfo = { label: string; nonWorking: boolean; countries?: HolidayCountry[] }
 
 const WEEK_DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+const WEEKDAY_GUIDE_OFFSET = 0
+const WEEKDAY_GUIDE_MOUSE_LOCK_MS = 650
 const LINEUP_API_BASE = (process.env.NEXT_PUBLIC_MDC_API_BASE ?? "https://api.hungryfishteam.org/gas/mdc").replace(/\/$/, "")
 const LINEUP_API_URL = `${LINEUP_API_BASE}/lineup?publish=true`
-const WEEKDAY_GUIDE_OFFSET = 0
 const MONTH_NAMES = [
   "Январь",
   "Февраль",
@@ -701,9 +703,14 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
   const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear())
   const [holidayFilter, setHolidayFilter] = useState<HolidayFilter>("all")
   const [lineupAvailability, setLineupAvailability] = useState<LineupAvailability | null>(null)
-  const focusedButtonRef = useRef<HTMLButtonElement | null>(null)
-  const weekRefs = useRef<Array<HTMLDivElement | null>>([])
+  const [weekdayGuidePinned, setWeekdayGuidePinned] = useState(false)
   const [weekdayGuide, setWeekdayGuide] = useState({ weekIndex: 0, top: 0 })
+  const weekRefs = useRef<Array<HTMLDivElement | null>>([])
+  const weekdayGuideRef = useRef(weekdayGuide)
+  const scrollFrameRef = useRef<number | null>(null)
+  const mouseFrameRef = useRef<number | null>(null)
+  const mouseLockUntilRef = useRef(0)
+  const focusedButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     let isActive = true
@@ -750,6 +757,11 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
     }
     return weeks
   }, [calendarDays])
+
+  useEffect(() => {
+    weekdayGuideRef.current = weekdayGuide
+  }, [weekdayGuide])
+
   const moveWeekdayGuideToWeek = useCallback(
     (weekIndex: number) => {
       const clampedWeekIndex = Math.min(Math.max(weekIndex, 0), Math.max(calendarWeeks.length - 1, 0))
@@ -764,15 +776,40 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
     [calendarWeeks.length],
   )
 
+  const scheduleWeekdayGuideMove = useCallback(
+    (weekIndex: number, source: "mouse" | "scroll" = "scroll") => {
+      if (weekdayGuidePinned) return
+      const frameRef = source === "mouse" ? mouseFrameRef : scrollFrameRef
+      if (source === "mouse") {
+        mouseLockUntilRef.current = Date.now() + WEEKDAY_GUIDE_MOUSE_LOCK_MS
+      } else if (Date.now() < mouseLockUntilRef.current) {
+        return
+      }
+      if (frameRef.current !== null) return
+      frameRef.current = window.requestAnimationFrame(() => {
+        frameRef.current = null
+        moveWeekdayGuideToWeek(weekIndex)
+      })
+    },
+    [moveWeekdayGuideToWeek, weekdayGuidePinned],
+  )
+
   useEffect(() => {
     weekRefs.current = weekRefs.current.slice(0, calendarWeeks.length)
-    const frameId = window.requestAnimationFrame(() => moveWeekdayGuideToWeek(0))
+    const frameId = window.requestAnimationFrame(() => moveWeekdayGuideToWeek(weekdayGuideRef.current.weekIndex))
     return () => window.cancelAnimationFrame(frameId)
   }, [calendarWeeks.length, moveWeekdayGuideToWeek])
 
   useEffect(() => {
+    if (weekdayGuidePinned) return
     const updateFromScroll = () => {
+      if (Date.now() < mouseLockUntilRef.current) return
       const focusY = window.innerHeight * 0.45
+      const currentNode = weekRefs.current[weekdayGuideRef.current.weekIndex]
+      const currentRect = currentNode?.getBoundingClientRect()
+      if (currentRect && currentRect.top - 28 <= focusY && currentRect.bottom + 28 >= focusY) {
+        return
+      }
       let bestWeekIndex = 0
       let bestDistance = Number.POSITIVE_INFINITY
 
@@ -790,24 +827,51 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
       })
 
       if (bestDistance !== Number.POSITIVE_INFINITY) {
-        moveWeekdayGuideToWeek(bestWeekIndex)
+        scheduleWeekdayGuideMove(bestWeekIndex, "scroll")
       }
     }
 
-    updateFromScroll()
-    window.addEventListener("scroll", updateFromScroll, { passive: true })
-    window.addEventListener("resize", updateFromScroll)
-    return () => {
-      window.removeEventListener("scroll", updateFromScroll)
-      window.removeEventListener("resize", updateFromScroll)
+    const scheduleUpdateFromScroll = () => {
+      if (scrollFrameRef.current !== null) return
+      scrollFrameRef.current = window.requestAnimationFrame(() => {
+        scrollFrameRef.current = null
+        updateFromScroll()
+      })
     }
-  }, [moveWeekdayGuideToWeek])
+
+    scheduleUpdateFromScroll()
+    window.addEventListener("scroll", scheduleUpdateFromScroll, { passive: true })
+    window.addEventListener("resize", scheduleUpdateFromScroll)
+    return () => {
+      window.removeEventListener("scroll", scheduleUpdateFromScroll)
+      window.removeEventListener("resize", scheduleUpdateFromScroll)
+      if (scrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(scrollFrameRef.current)
+        scrollFrameRef.current = null
+      }
+    }
+  }, [scheduleWeekdayGuideMove, weekdayGuidePinned])
+
+  useEffect(() => {
+    if (!weekdayGuidePinned) {
+      const frameId = window.requestAnimationFrame(() => moveWeekdayGuideToWeek(weekdayGuideRef.current.weekIndex))
+      return () => window.cancelAnimationFrame(frameId)
+    }
+  }, [moveWeekdayGuideToWeek, weekdayGuidePinned])
+
+  useEffect(() => {
+    return () => {
+      if (scrollFrameRef.current !== null) window.cancelAnimationFrame(scrollFrameRef.current)
+      if (mouseFrameRef.current !== null) window.cancelAnimationFrame(mouseFrameRef.current)
+    }
+  }, [])
 
   const handleCalendarMouseMove = (event: MouseEvent<HTMLDivElement>) => {
+    if (weekdayGuidePinned) return
     const weekNode = (event.target as HTMLElement).closest<HTMLElement>("[data-calendar-week-index]")
     const weekIndex = Number(weekNode?.dataset.calendarWeekIndex)
     if (Number.isFinite(weekIndex)) {
-      moveWeekdayGuideToWeek(weekIndex)
+      scheduleWeekdayGuideMove(weekIndex, "mouse")
     }
   }
 
@@ -949,12 +1013,37 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="overflow-x-auto pb-1">
-          <div className="relative min-w-[920px] pt-8" onMouseMove={handleCalendarMouseMove}>
+          <div
+            className={cn("relative min-w-[920px]", weekdayGuidePinned ? "pt-0" : "pt-8")}
+            onMouseMove={handleCalendarMouseMove}
+          >
             <div
-              className="pointer-events-none absolute left-0 right-0 top-0 z-20 grid grid-cols-7 gap-1 rounded-md border border-christmas-gold/20 bg-card/95 text-center text-sm font-bold uppercase tracking-wider text-christmas-gold shadow-lg shadow-black/20 backdrop-blur transition-transform duration-200 ease-out"
-              style={{ transform: `translateY(${weekdayGuide.top}px)` }}
+              className={cn(
+                "left-0 right-0 z-20 rounded-md border border-christmas-gold/20 bg-card/95 text-center text-sm font-bold uppercase tracking-wider text-christmas-gold shadow-lg shadow-black/20 backdrop-blur",
+                weekdayGuidePinned
+                  ? "sticky top-2 mb-3"
+                  : "pointer-events-none absolute top-0 transition-transform duration-200 ease-out",
+              )}
+              style={weekdayGuidePinned ? undefined : { transform: `translateY(${weekdayGuide.top}px)` }}
             >
-              {WEEK_DAYS.map((day) => <div key={day} className="py-1.5">{day}</div>)}
+              <div className="grid grid-cols-7 gap-1 pr-9">
+                {WEEK_DAYS.map((day) => <div key={day} className="py-1.5">{day}</div>)}
+              </div>
+              <button
+                type="button"
+                onClick={() => setWeekdayGuidePinned((pinned) => !pinned)}
+                title={weekdayGuidePinned ? "Открепить дни недели" : "Закрепить дни недели сверху"}
+                aria-label={weekdayGuidePinned ? "Открепить дни недели" : "Закрепить дни недели сверху"}
+                aria-pressed={weekdayGuidePinned}
+                className={cn(
+                  "pointer-events-auto absolute right-1 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded border text-christmas-gold transition-colors",
+                  weekdayGuidePinned
+                    ? "border-christmas-gold/60 bg-christmas-gold/15"
+                    : "border-christmas-gold/25 bg-background/75 hover:border-christmas-gold/60 hover:bg-christmas-gold/10",
+                )}
+              >
+                <Pin className={cn("h-3.5 w-3.5", weekdayGuidePinned && "fill-current")} />
+              </button>
             </div>
             <div className="space-y-3">
               {calendarWeeks.map((week, weekIndex) => (
@@ -966,7 +1055,7 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
                   data-calendar-week-index={weekIndex}
                   className={cn(
                     "grid grid-cols-7 gap-2 transition-[padding] duration-200",
-                    weekdayGuide.weekIndex === weekIndex && "pt-10",
+                    !weekdayGuidePinned && weekdayGuide.weekIndex === weekIndex && "pt-10",
                   )}
                 >
                   {week.map((day, dayIndex) => {
