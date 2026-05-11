@@ -67,7 +67,8 @@ import {
   type RoleLeaderboardMetric,
 } from "@/lib/data-utils"
 import { getAchievementIcon, getMetricIcon } from "@/lib/app-icons"
-import { fetchAllData, fetchUpstreamSignature, type SyncProgressUpdate, type UpstreamSignature } from "@/lib/api"
+import { fetchAllData, type SyncProgressUpdate } from "@/lib/api"
+import { fetchUpstreamSignature, type UpstreamSignature } from "@/lib/upstream-signature"
 import { withBasePath } from "@/lib/base-path"
 import { getSeasonalTheme, type SeasonalTheme } from "@/lib/seasonal-theme"
 import { cn } from "@/lib/utils"
@@ -1411,7 +1412,7 @@ export default function YearReviewPage() {
       if (forceRefresh && !resetCache) {
         try {
           const previousUpstream = readUpstreamMeta()
-          const signature = await fetchUpstreamSignature({ forceRefresh: true, publish: true })
+          const signature = await fetchUpstreamSignature(true)
           const sameEtag = previousUpstream?.signature.etag && signature.etag && previousUpstream.signature.etag === signature.etag
           const sameLastModified =
             previousUpstream?.signature.lastModified &&
