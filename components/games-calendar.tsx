@@ -708,7 +708,9 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
   const [weekdayGuideStickyTop, setWeekdayGuideStickyTop] = useState(WEEKDAY_GUIDE_STICKY_TOP)
   const [weekdayGuideContentOffset, setWeekdayGuideContentOffset] = useState(0)
   const [weekdayGuideReservedOffset, setWeekdayGuideReservedOffset] = useState(0)
+  const [weekdayGuideClipTop, setWeekdayGuideClipTop] = useState(0)
   const [weekdayGuide, setWeekdayGuide] = useState({ weekIndex: 0, top: 0 })
+  const calendarScrollerRef = useRef<HTMLDivElement | null>(null)
   const weekRefs = useRef<Array<HTMLDivElement | null>>([])
   const weekdayGuideRef = useRef(weekdayGuide)
   const scrollFrameRef = useRef<number | null>(null)
@@ -860,6 +862,7 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
     if (!weekdayGuidePinned) {
       setWeekdayGuideContentOffset(0)
       setWeekdayGuideReservedOffset(0)
+      setWeekdayGuideClipTop(0)
       const frameId = window.requestAnimationFrame(() => moveWeekdayGuideToWeek(weekdayGuideRef.current.weekIndex))
       return () => window.cancelAnimationFrame(frameId)
     }
@@ -877,12 +880,14 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
         const guide = document.querySelector<HTMLElement>("[data-testid='calendar-weekday-guide-pinned']")
         const stickyTop = Math.max(WEEKDAY_GUIDE_STICKY_TOP, Math.ceil((headerRect?.bottom ?? 0) + 8))
         const guideRect = guide?.getBoundingClientRect()
+        const scrollerRect = calendarScrollerRef.current?.getBoundingClientRect()
         const isStuck = Boolean(guideRect && guideRect.top <= stickyTop + 1)
         const reservedOffset = Math.ceil((guideRect?.height ?? 34) + 10)
 
         setWeekdayGuideStickyTop(stickyTop)
         setWeekdayGuideReservedOffset(reservedOffset)
         setWeekdayGuideContentOffset(isStuck ? reservedOffset : 0)
+        setWeekdayGuideClipTop(isStuck && guideRect && scrollerRect ? Math.max(0, Math.ceil(guideRect.bottom + 2 - scrollerRect.top)) : 0)
       })
     }
 
@@ -1090,7 +1095,12 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
       </CardHeader>
       <CardContent className="space-y-3">
         {weekdayGuidePinned ? renderWeekdayGuide("pinned") : null}
-        <div className="overflow-x-auto pb-1">
+        <div
+          ref={calendarScrollerRef}
+          data-testid="calendar-week-grid-scroll"
+          className="overflow-x-auto pb-1"
+          style={weekdayGuideClipTop > 0 ? { clipPath: `inset(${weekdayGuideClipTop}px 0 0 0)` } : undefined}
+        >
           <div className="min-w-[920px]">
             <div
               className={cn("relative", !weekdayGuidePinned && "pt-8")}

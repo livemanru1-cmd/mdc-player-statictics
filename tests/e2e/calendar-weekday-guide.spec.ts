@@ -70,10 +70,13 @@ test("pinned calendar weekday guide stays above the first week", async ({ page }
     const scrollOverlap = await page.evaluate(() => {
       const guide = document.querySelector<HTMLElement>("[data-testid='calendar-weekday-guide-pinned']")
       const header = document.querySelector<HTMLElement>("[data-testid='seasonal-header']")
-      if (!guide || !header) return null
+      const scroller = document.querySelector<HTMLElement>("[data-testid='calendar-week-grid-scroll']")
+      if (!guide || !header || !scroller) return null
 
       const guideRect = guide.getBoundingClientRect()
       const headerRect = header.getBoundingClientRect()
+      const scrollerRect = scroller.getBoundingClientRect()
+      const clipPath = getComputedStyle(scroller).clipPath
       const weeks = [...document.querySelectorAll<HTMLElement>("[data-calendar-week-index]")]
         .map((week) => week.getBoundingClientRect())
         .filter((rect) => rect.bottom > 0 && rect.top < window.innerHeight)
@@ -83,6 +86,8 @@ test("pinned calendar weekday guide stays above the first week", async ({ page }
         guideBottom: guideRect.bottom,
         headerBottom: headerRect.bottom,
         position: getComputedStyle(guide).position,
+        clipPath,
+        clipsAboveGuide: clipPath !== "none" && Number.parseFloat(clipPath.match(/inset\(([-\d.]+)px/)?.[1] ?? "0") >= Math.ceil(guideRect.bottom + 1 - scrollerRect.top),
         hiddenUnderHeader: guideRect.top < headerRect.bottom - 1,
         hasWeekStartingUnderGuide: weeks.some((rect) => rect.top >= guideRect.top - 1 && rect.top < guideRect.bottom + 8),
       }
@@ -90,6 +95,7 @@ test("pinned calendar weekday guide stays above the first week", async ({ page }
 
     expect(scrollOverlap).not.toBeNull()
     expect(scrollOverlap?.position).toBe("sticky")
+    expect(scrollOverlap?.clipsAboveGuide).toBe(true)
     expect(scrollOverlap?.hiddenUnderHeader).toBe(false)
     expect(scrollOverlap?.hasWeekStartingUnderGuide).toBe(false)
   }
