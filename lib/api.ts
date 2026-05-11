@@ -27,11 +27,6 @@ export interface FetchApiOptions {
   publish?: boolean
   skipPagedStats?: boolean
   preferSplitEndpoints?: boolean
-  /**
-   * When set, protocol pages (playersevents?page=N) are fetched starting from this page index (0-based).
-   * Useful for incremental sync when older pages are already cached locally.
-   */
-  protocolFromPage?: number
   onProgress?: (progress: SyncProgressUpdate) => void
 }
 
@@ -1067,8 +1062,7 @@ async function fetchPagedPlayerEventStatsRaw(options: FetchApiOptions = {}): Pro
     pagesTotal: pagesCount,
   })
 
-  const fromPage = Math.max(0, Math.min(pagesCount, Math.floor(options.protocolFromPage ?? 0)))
-  const pageIndexes = Array.from({ length: pagesCount - fromPage }, (_, index) => index + fromPage)
+  const pageIndexes = Array.from({ length: pagesCount }, (_, index) => index)
   const collectedRows: unknown[] = []
   const BATCH_SIZE = 8
   let completedPages = 0
@@ -1096,9 +1090,9 @@ async function fetchPagedPlayerEventStatsRaw(options: FetchApiOptions = {}): Pro
     completedPages = Math.min(pagesCount, completedPages + batch.length)
     reportSyncProgress(options, {
       stage: "pages",
-      percent: pageIndexes.length > 0 ? 25 + (completedPages / pageIndexes.length) * 65 : 90,
+      percent: 25 + (completedPages / pagesCount) * 65,
       message: "Синхронизация страниц протокола...",
-      pagesDone: Math.min(pagesCount, fromPage + completedPages),
+      pagesDone: completedPages,
       pagesTotal: pagesCount,
     })
   }
@@ -1112,51 +1106,6 @@ async function fetchPagedPlayerEventStatsRaw(options: FetchApiOptions = {}): Pro
   })
 
   return collectedRows
-}
-
-export type UpstreamSignature = {
-  etag: string | null
-  lastModified: string | null
-  url: string
-}
-
-function normalizeHeaderValue(value: string | null): string | null {
-  const trimmed = value?.trim()
-  return trimmed ? trimmed : null
-}
-
-/**
- * Lightweight "did anything change?" check for the upstream data source.
- * Uses HTTP caching headers (ETag / Last-Modified) so we can avoid a full sync if nothing changed.
- *
- * Notes:
- * - Some backends don't support HEAD; we fall back to a minimal GET.
- * - If headers are missing, the signature will be null-ish and callers can choose a safe fallback.
- */
-export async function fetchUpstreamSignature(options: FetchApiOptions = {}): Promise<UpstreamSignature> {
-  const url = withQueryParams(`${API_BASE}/pages`, { publish: "true" })
-  const requestInit: RequestInit = options.forceRefresh ? { cache: "no-store" } : {}
-
-  const attemptFetch = async (method: "HEAD" | "GET") => {
-    const response = await fetch(url, { ...requestInit, method })
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} (${url})`)
-    }
-    return response
-  }
-
-  let response: Response
-  try {
-    response = await attemptFetch("HEAD")
-  } catch {
-    response = await attemptFetch("GET")
-  }
-
-  return {
-    url,
-    etag: normalizeHeaderValue(response.headers.get("etag")),
-    lastModified: normalizeHeaderValue(response.headers.get("last-modified")),
-  }
 }
 
 export function normalizeMDCData(payload: unknown): MDCData {
