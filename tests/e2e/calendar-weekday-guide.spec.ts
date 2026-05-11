@@ -14,6 +14,7 @@ test("pinned calendar weekday guide stays above the first week", async ({ page }
   const pinnedGuide = page.getByTestId("calendar-weekday-guide-pinned")
   await expect(pinnedGuide).toBeVisible()
   await expect(floatingGuide).toBeHidden()
+  await expect(page.getByTestId("calendar-weekday-guide-fixed")).toHaveCount(0)
 
   const overlap = await page.evaluate(() => {
     const guide = document.querySelector<HTMLElement>("[data-testid='calendar-weekday-guide-pinned']")
@@ -40,8 +41,7 @@ test("pinned calendar weekday guide stays above the first week", async ({ page }
     window.scrollBy({ top: guide.getBoundingClientRect().top - targetTop, behavior: "auto" })
   })
 
-  const fixedGuide = page.getByTestId("calendar-weekday-guide-fixed")
-  await expect(fixedGuide).toBeVisible()
+  await expect(pinnedGuide).toBeVisible()
   await page.waitForTimeout(100)
 
   for (const scrollY of [500, 750, 900]) {
@@ -49,7 +49,7 @@ test("pinned calendar weekday guide stays above the first week", async ({ page }
     await page.waitForTimeout(150)
 
     const scrollOverlap = await page.evaluate(() => {
-      const guide = document.querySelector<HTMLElement>("[data-testid='calendar-weekday-guide-fixed']")
+      const guide = document.querySelector<HTMLElement>("[data-testid='calendar-weekday-guide-pinned']")
       const header = document.querySelector<HTMLElement>("[data-testid='seasonal-header']")
       if (!guide || !header) return null
 
@@ -62,12 +62,16 @@ test("pinned calendar weekday guide stays above the first week", async ({ page }
       return {
         guideTop: guideRect.top,
         headerBottom: headerRect.bottom,
+        position: getComputedStyle(guide).position,
+        maskHeight: Number.parseFloat(getComputedStyle(guide, "::before").height),
         hiddenUnderHeader: guideRect.top < headerRect.bottom - 1,
         hasWeekStartingUnderGuide: weeks.some((rect) => rect.top >= guideRect.top - 1 && rect.top < guideRect.bottom + 8),
       }
     })
 
     expect(scrollOverlap).not.toBeNull()
+    expect(scrollOverlap?.position).toBe("sticky")
+    expect(scrollOverlap?.maskHeight ?? 0).toBeGreaterThan(0)
     expect(scrollOverlap?.hiddenUnderHeader).toBe(false)
     expect(scrollOverlap?.hasWeekStartingUnderGuide).toBe(false)
   }
