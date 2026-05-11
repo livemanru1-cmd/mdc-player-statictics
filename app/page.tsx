@@ -1418,8 +1418,12 @@ export default function YearReviewPage() {
             previousUpstream?.signature.lastModified &&
             signature.lastModified &&
             previousUpstream.signature.lastModified === signature.lastModified
+          const sameCachedUpdatedAt =
+            previousUpstream?.signature.cachedUpdatedAt &&
+            signature.cachedUpdatedAt &&
+            previousUpstream.signature.cachedUpdatedAt === signature.cachedUpdatedAt
 
-          if ((sameEtag || sameLastModified) && cached) {
+          if ((sameEtag || sameLastModified || sameCachedUpdatedAt) && cached) {
             setSyncProgress((current) => ({
               active: false,
               startedAt: current?.startedAt ?? startedAt,
