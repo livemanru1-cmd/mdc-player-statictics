@@ -61,9 +61,9 @@ test("pinned calendar weekday guide stays above the first week", async ({ page }
 
       return {
         guideTop: guideRect.top,
+        guideBottom: guideRect.bottom,
         headerBottom: headerRect.bottom,
         position: getComputedStyle(guide).position,
-        maskHeight: Number.parseFloat(getComputedStyle(guide, "::before").height),
         hiddenUnderHeader: guideRect.top < headerRect.bottom - 1,
         hasWeekStartingUnderGuide: weeks.some((rect) => rect.top >= guideRect.top - 1 && rect.top < guideRect.bottom + 8),
       }
@@ -71,7 +71,6 @@ test("pinned calendar weekday guide stays above the first week", async ({ page }
 
     expect(scrollOverlap).not.toBeNull()
     expect(scrollOverlap?.position).toBe("sticky")
-    expect(scrollOverlap?.maskHeight ?? 0).toBeGreaterThan(0)
     expect(scrollOverlap?.hiddenUnderHeader).toBe(false)
     expect(scrollOverlap?.hasWeekStartingUnderGuide).toBe(false)
   }

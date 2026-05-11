@@ -706,9 +706,11 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
   const [lineupAvailability, setLineupAvailability] = useState<LineupAvailability | null>(null)
   const [weekdayGuidePinned, setWeekdayGuidePinned] = useState(false)
   const [weekdayGuideStickyTop, setWeekdayGuideStickyTop] = useState(WEEKDAY_GUIDE_STICKY_TOP)
+  const [weekdayGuideContentOffset, setWeekdayGuideContentOffset] = useState(0)
   const [weekdayGuide, setWeekdayGuide] = useState({ weekIndex: 0, top: 0 })
   const weekRefs = useRef<Array<HTMLDivElement | null>>([])
   const weekdayGuideRef = useRef(weekdayGuide)
+  const weekdayGuideContentOffsetRef = useRef(0)
   const scrollFrameRef = useRef<number | null>(null)
   const mouseFrameRef = useRef<number | null>(null)
   const mouseLockUntilRef = useRef(0)
@@ -763,6 +765,10 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
   useEffect(() => {
     weekdayGuideRef.current = weekdayGuide
   }, [weekdayGuide])
+
+  useEffect(() => {
+    weekdayGuideContentOffsetRef.current = weekdayGuideContentOffset
+  }, [weekdayGuideContentOffset])
 
   const moveWeekdayGuideToWeek = useCallback(
     (weekIndex: number) => {
@@ -856,6 +862,7 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
 
   useEffect(() => {
     if (!weekdayGuidePinned) {
+      setWeekdayGuideContentOffset(0)
       const frameId = window.requestAnimationFrame(() => moveWeekdayGuideToWeek(weekdayGuideRef.current.weekIndex))
       return () => window.cancelAnimationFrame(frameId)
     }
@@ -870,7 +877,30 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
       frameId = window.requestAnimationFrame(() => {
         frameId = null
         const headerRect = document.querySelector<HTMLElement>("[data-testid='seasonal-header']")?.getBoundingClientRect()
-        setWeekdayGuideStickyTop(Math.max(WEEKDAY_GUIDE_STICKY_TOP, Math.ceil((headerRect?.bottom ?? 0) + 8)))
+        const guide = document.querySelector<HTMLElement>("[data-testid='calendar-weekday-guide-pinned']")
+        const stickyTop = Math.max(WEEKDAY_GUIDE_STICKY_TOP, Math.ceil((headerRect?.bottom ?? 0) + 8))
+        setWeekdayGuideStickyTop(stickyTop)
+
+        const guideRect = guide?.getBoundingClientRect()
+        if (!guideRect || guideRect.top > stickyTop + 1) {
+          setWeekdayGuideContentOffset(0)
+          return
+        }
+
+        const currentOffset = weekdayGuideContentOffsetRef.current
+        const guideBottom = guideRect.bottom + 10
+        const offset = weekRefs.current.reduce((maxOffset, weekNode) => {
+          if (!weekNode) return maxOffset
+          const rect = weekNode.getBoundingClientRect()
+          const baseTop = rect.top - currentOffset
+          const baseBottom = rect.bottom - currentOffset
+          if (baseBottom <= guideRect.top || baseTop >= window.innerHeight) return maxOffset
+          if (baseTop < guideBottom && baseBottom > guideRect.top) {
+            return Math.max(maxOffset, Math.ceil(guideBottom - baseTop))
+          }
+          return maxOffset
+        }, 0)
+        setWeekdayGuideContentOffset(offset)
       })
     }
 
@@ -910,13 +940,13 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
         className={cn(
           "rounded-md border border-christmas-gold/20 bg-background text-center text-sm font-bold uppercase tracking-wider text-christmas-gold shadow-lg shadow-black/20",
           mode === "floating" && "pointer-events-none absolute left-0 right-0 top-0 z-20 transition-transform duration-200 ease-out",
-          mode === "pinned" && "sticky z-30 mb-3 before:pointer-events-none before:absolute before:bottom-full before:left-0 before:right-0 before:h-[var(--weekday-guide-sticky-top)] before:bg-background before:content-['']",
+          mode === "pinned" && "sticky z-30 mb-3",
         )}
         style={
           mode === "floating"
             ? { transform: `translateY(${weekdayGuide.top}px)` }
             : mode === "pinned"
-              ? ({ top: weekdayGuideStickyTop, "--weekday-guide-sticky-top": `${weekdayGuideStickyTop}px` } as CSSProperties)
+              ? { top: weekdayGuideStickyTop }
               : undefined
         }
       >
@@ -1087,7 +1117,10 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
               {!weekdayGuidePinned ? (
                 renderWeekdayGuide("floating")
               ) : null}
-              <div className="space-y-3">
+              <div
+                className="space-y-3"
+                style={weekdayGuideContentOffset > 0 ? { paddingTop: weekdayGuideContentOffset } : undefined}
+              >
               {calendarWeeks.map((week, weekIndex) => (
                 <div
                   key={`week-${weekIndex}`}
