@@ -66,6 +66,7 @@ const WEEK_DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 const WEEKDAY_GUIDE_OFFSET = 0
 const WEEKDAY_GUIDE_MOUSE_LOCK_MS = 650
 const WEEKDAY_GUIDE_STICKY_TOP = 12
+const WEEKDAY_GUIDE_PINNED_STORAGE_KEY = "mdc-calendar-weekday-guide-pinned"
 const LINEUP_API_BASE = (process.env.NEXT_PUBLIC_MDC_API_BASE ?? "https://api.hungryfishteam.org/gas/mdc").replace(/\/$/, "")
 const LINEUP_API_URL = `${LINEUP_API_BASE}/lineup?publish=true`
 const MONTH_NAMES = [
@@ -705,6 +706,7 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
   const [holidayFilter, setHolidayFilter] = useState<HolidayFilter>("all")
   const [lineupAvailability, setLineupAvailability] = useState<LineupAvailability | null>(null)
   const [weekdayGuidePinned, setWeekdayGuidePinned] = useState(false)
+  const [weekdayGuidePreferenceReady, setWeekdayGuidePreferenceReady] = useState(false)
   const [weekdayGuideStickyTop, setWeekdayGuideStickyTop] = useState(WEEKDAY_GUIDE_STICKY_TOP)
   const [weekdayGuideContentOffset, setWeekdayGuideContentOffset] = useState(0)
   const [weekdayGuideReservedOffset, setWeekdayGuideReservedOffset] = useState(0)
@@ -719,6 +721,26 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
   const mouseFrameRef = useRef<number | null>(null)
   const mouseLockUntilRef = useRef(0)
   const focusedButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    try {
+      setWeekdayGuidePinned(window.localStorage.getItem(WEEKDAY_GUIDE_PINNED_STORAGE_KEY) === "true")
+    } catch {
+      // Local storage can be blocked; the calendar still works with the default state.
+    } finally {
+      setWeekdayGuidePreferenceReady(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!weekdayGuidePreferenceReady) return
+
+    try {
+      window.localStorage.setItem(WEEKDAY_GUIDE_PINNED_STORAGE_KEY, weekdayGuidePinned ? "true" : "false")
+    } catch {
+      // Ignore storage failures, the visible pinned state has already changed.
+    }
+  }, [weekdayGuidePinned, weekdayGuidePreferenceReady])
 
   useEffect(() => {
     let isActive = true

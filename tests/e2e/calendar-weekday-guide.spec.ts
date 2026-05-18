@@ -42,6 +42,13 @@ test("pinned calendar weekday guide stays above the first week", async ({ page }
   await expect(pinnedGuide).toBeVisible()
   await expect(floatingGuide).toBeHidden()
   await expect(page.getByTestId("calendar-weekday-guide-fixed")).toHaveCount(0)
+  await expect
+    .poll(() => page.evaluate(() => window.localStorage.getItem("mdc-calendar-weekday-guide-pinned")))
+    .toBe("true")
+
+  await page.reload()
+  await expect(pinnedGuide).toBeVisible({ timeout: 120_000 })
+  await expect(floatingGuide).toBeHidden()
 
   const initialPinnedSpacing = await page.evaluate(() => {
     const guide = document.querySelector<HTMLElement>("[data-testid='calendar-weekday-guide-pinned']")
