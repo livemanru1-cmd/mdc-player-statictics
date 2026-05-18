@@ -51,7 +51,6 @@ type LineupPlayerMetric = {
   key: string
   label: string
   tooltip?: string
-  showTooltip?: boolean
   icon: AppMetricIconKey
   getValue: (player: Player) => number
   digits?: number
@@ -137,9 +136,9 @@ const LINEUP_PLAYER_METRICS: LineupPlayerMetric[] = [
   { key: "avgVehicle", label: "Техника", tooltip: "Техника, в среднем за игру", icon: "vehicle", getValue: (player) => player.totals.avgVehicle, digits: 1 },
   { key: "kd", label: "KD", icon: "kd", getValue: (player) => player.totals.kd, digits: 2 },
   { key: "kda", label: "KDA", icon: "kda", getValue: (player) => player.totals.kda, digits: 2 },
-  { key: "elo", label: "ELO", showTooltip: false, icon: "elo", getValue: (player) => player.totals.elo, digits: 0 },
-  { key: "tbf", label: "ТБФ", showTooltip: false, icon: "tbf", getValue: (player) => player.totals.tbf, digits: 0 },
-  { key: "rating", label: "ОР", showTooltip: false, icon: "rating", getValue: (player) => player.totals.rating, digits: 0 },
+  { key: "elo", label: "ELO", icon: "elo", getValue: (player) => player.totals.elo, digits: 0 },
+  { key: "tbf", label: "ТБФ", icon: "tbf", getValue: (player) => player.totals.tbf, digits: 0 },
+  { key: "rating", label: "ОР", icon: "rating", getValue: (player) => player.totals.rating, digits: 0 },
 ]
 
 function isMeaningful(value: unknown) {
@@ -349,22 +348,19 @@ function LineupPlayerTooltip({ player }: { player: Player }) {
         {LINEUP_PLAYER_METRICS.map((metric) => {
           const Icon = getMetricIcon(metric.icon)
           const tooltip = metric.tooltip ?? metric.label
-          const showTooltip = metric.showTooltip !== false
           return (
             <div
               key={metric.key}
-              title={showTooltip ? tooltip : undefined}
-              aria-label={showTooltip ? tooltip : metric.label}
+              title={tooltip}
+              aria-label={tooltip}
               className="group relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-md border border-border/50 bg-background/35 px-2 py-1.5 text-center"
             >
               <Icon className="h-3.5 w-3.5 text-christmas-gold" />
               <span className="text-[11px] font-semibold text-christmas-snow">{formatLineupMetricValue(metric.getValue(player), metric.digits)}</span>
-              {showTooltip ? (
-                <span className="pointer-events-none absolute -top-7 left-1/2 z-20 max-w-[180px] -translate-x-1/2 whitespace-nowrap rounded-md border border-christmas-gold/30 bg-card px-2 py-1 text-[10px] font-medium text-christmas-snow opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-                  {tooltip}
-                </span>
-              ) : null}
-              <span className="sr-only">{showTooltip ? tooltip : metric.label}</span>
+              <span className="pointer-events-none absolute -top-7 left-1/2 z-20 max-w-[180px] -translate-x-1/2 whitespace-nowrap rounded-md border border-christmas-gold/30 bg-card px-2 py-1 text-[10px] font-medium text-christmas-snow opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                {tooltip}
+              </span>
+              <span className="sr-only">{tooltip}</span>
             </div>
           )
         })}
