@@ -1233,7 +1233,7 @@ export function GamesCalendar({ games, onOpenGame, onOpenLineup, focusedEventId 
                                         <span className="truncate">{cleanCalendarValue(item.primary.mode)}</span>
                                       </div> : null}
                                       {cleanCalendarValue(item.primary.opponent) ? <div className="flex min-w-0 items-center justify-center gap-1.5">
-                                        <Shield className="h-3 w-3 shrink-0" />
+                                        <Swords className="h-3 w-3 shrink-0" />
                                         <span className="truncate">Соперник: {cleanCalendarValue(item.primary.opponent)}</span>
                                       </div> : null}
                                       {explicitMatchupLabel(item.primary) ? <div className="flex min-w-0 items-center justify-center gap-1.5">
