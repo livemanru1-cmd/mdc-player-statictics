@@ -32,7 +32,7 @@ type GamesTagOption = MultiValueFilterOption & {
   rawTags: string[]
 }
 
-const DEFAULT_GAMES_TAG_TOKENS = ["mdc", "grave", "nklv"]
+const DEFAULT_GAMES_TAG_TOKENS = ["mdc", "grave", "nklv", "dcai"]
 const HIDDEN_GAMES_TAG_TOKENS = ["ветеран", "неактив"]
 const MDC_GAMES_TAG_VALUE = "__tag_group__mdc"
 

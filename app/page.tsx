@@ -440,7 +440,7 @@ type LeaderboardCardConfig = {
   key: string
   render: (isCollapsed: boolean, onToggle: () => void) => ReactNode
 }
-const DEFAULT_TAG_FILTER_TOKENS = ["mdc", "grave", "nklv"]
+const DEFAULT_TAG_FILTER_TOKENS = ["mdc", "grave", "nklv", "dcai"]
 const HIDDEN_TAG_FILTER_TOKENS = ["ветеран", "неактив"]
 const MDC_TAG_FILTER_VALUE = "__tag_group__mdc"
 const MDC_TAG_FILTER_LABEL = "Mdc︱"
